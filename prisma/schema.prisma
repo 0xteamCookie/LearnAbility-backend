@@ -12,3 +12,68 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+
+  dataSources DataSource[]
+  aiChats     AIChat[]
+  reminders   Reminder[]
+  contents    AIContent[]
+}
+
+model DataSource {
+  id        String           @id @default(uuid())
+  type      DataSourceType
+  content   String?          // text/chunks/embeddings for RAG
+  source    String           // URL or filename
+  status    DataSourceStatus 
+  user      User             @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime         @default(now())
+}
+
+enum DataSourceStatus {
+  ERROR 
+  PROCESSING
+  COMPLETED
+}
+
+enum DataSourceType {
+  WEBSITE
+  TEXT
+}
+
+model AIChat {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  messages  Json
+  createdAt DateTime @default(now())
+}
+
+model AIContent {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  content     String  
+  tags        String[]
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  createdAt   DateTime @default(now())
+}
+
+model Reminder {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  time        DateTime
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  createdAt   DateTime @default(now())
+}
