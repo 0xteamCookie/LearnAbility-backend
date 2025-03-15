@@ -20,6 +20,9 @@ model User {
   password  String
   name      String
   createdAt DateTime @default(now())
+  syllabusContent String? // add it later after user uploads syllabus using gemini's OCR
+  standard String
+  interests String
 
   dataSources DataSource[]
   aiChats     AIChat[]
