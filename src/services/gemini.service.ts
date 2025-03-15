@@ -126,5 +126,5 @@ export async function getEmbeddings(texts: string) {
     const valuesProto = embeddingsProto.structValue.fields.values;
     return valuesProto.listValue.values.map((v: any) => v.numberValue);
   });
-  return JSON.stringify(embeddings);
+  return embeddings[0];
 }
