@@ -52,7 +52,6 @@ export async function searchMilvus(queryText: string, userId: string, topK = 2) 
       filter: `user_id == "${userId}"`,
     });
 
-    console.log(searchResults);
     if (!searchResults || searchResults.results.length === 0) {
       throw new Error('No relevant results found.');
     }
