@@ -14,12 +14,10 @@ export const register = async (req: Request, res: Response) => {
     const { email, password, name, interests, standard } = req.body;
 
     if (!email || !password || !name || !interests || !standard) {
-      return void res
-        .status(400)
-        .json({
-          success: false,
-          message: 'Email, password, name , interests and standard are required',
-        });
+      return void res.status(400).json({
+        success: false,
+        message: 'Email, password, name , interests and standard are required',
+      });
     }
 
     const existingUser = await db.user.findUnique({ where: { email } });
@@ -76,7 +74,14 @@ export const getProfile = async (req: Request, res: Response) => {
 
     return void res.json({
       success: true,
-      user: { id: user.id, email: user.email, name: user.name },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        interests: user.interests,
+        standard: user.standard,
+        syllabusContent: user.syllabusContent,
+      },
     });
   } catch (error) {
     console.error(error);
