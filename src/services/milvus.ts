@@ -34,6 +34,40 @@ export async function insertEmbeddings(documents: any, userId: string) {
   }
 }
 
+export async function searchMilvus(queryText: string, userId: string, topK = 2) {
+  try {
+    await client.loadCollection({ collection_name: COLLECTION_NAME });
+
+    console.log('Getting query embeddings...');
+    const queryEmbedding = await getEmbeddings(queryText);
+    if (!queryEmbedding) {
+      throw new Error('Failed to generate embedding');
+    }
+
+    const searchResults = await client.search({
+      collection_name: COLLECTION_NAME,
+      vector: queryEmbedding,
+      limit: topK,
+      metric_type: 'COSINE',
+      filter: `user_id == "${userId}"`,
+    });
+
+    console.log(searchResults);
+    if (!searchResults || searchResults.results.length === 0) {
+      throw new Error('No relevant results found.');
+    }
+
+    return searchResults.results.map((result) => ({
+      text: result.text,
+      score: result.score,
+      metadata: result.metadata,
+    }));
+  } catch (error) {
+    console.error('Error searching Milvus:', error);
+    throw new Error(`Search failed: ${error}`);
+  }
+}
+
 async function createCollection() {
   try {
     const collections = await client.showCollections();
