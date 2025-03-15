@@ -2,8 +2,6 @@ import { Request, Response } from 'express';
 import db from '../db/db';
 import { DataSourceStatus, DataSourceType } from '@prisma/client';
 import { extractTextFromDocument } from '../services/gemini.service';
-import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { insertEmbeddings } from '../services/milvus';
 
 /**
  * Process a file asynchronously and update the existing record
