@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import db from '../db/db';
 import { DataSourceStatus, DataSourceType } from '@prisma/client';
 import { extractTextFromDocument } from '../services/gemini.service';
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import { insertEmbeddings } from '../services/milvus';
 
 /**
  * Process a file asynchronously and update the existing record
@@ -17,7 +19,17 @@ const processFileAsync = async (
 
     // Extract text from document
     const extractedText = await extractTextFromDocument(filePath);
-
+    const textSplitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 2000,
+      chunkOverlap: 200,
+      separators: ['\n\n', '\n', ' ', ''],
+    });
+    const bufferOutput = await textSplitter.createDocuments([extractedText]);
+    const output = bufferOutput.map((chunk, index) => ({
+      pageContent: chunk.pageContent,
+      metadata: { chunk_id: index },
+    }));
+    await insertEmbeddings(output, userId);
     // Update the existing record instead of creating a new one
     await db.dataSource.update({
       where: { id: dataSourceId },
