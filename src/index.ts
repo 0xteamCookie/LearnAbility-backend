@@ -4,6 +4,7 @@ import cors from 'cors';
 import { authRoutes } from './routes/auth.routes';
 import { dataSourceRoutes } from './routes/source.routes';
 import { syllabusRoutes } from './routes/syllabus.routes';
+import { feedRoutes } from './routes/feed.routes';
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(cors());
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/data-sources', dataSourceRoutes);
 app.use('/api/v1/syllabus', syllabusRoutes);
+app.use('/api/v1/feed', feedRoutes);
 
 const PORT = process.env.PORT || 30000;
 
