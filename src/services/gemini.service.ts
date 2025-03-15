@@ -99,3 +99,32 @@ export const extractTextFromImage = async (filePath: string): Promise<string> =>
 export const extractTextFromPDF = async (filePath: string): Promise<string> => {
   return extractTextFromDocument(filePath);
 };
+
+export async function getEmbeddings(texts: string) {
+  const project = PROJECT_ID;
+  const model = 'text-embedding-005';
+  const task = 'QUESTION_ANSWERING';
+  const dimensionality = 0; // 768
+  const apiEndpoint = 'europe-west4-aiplatform.googleapis.com';
+  const aiplatform = require('@google-cloud/aiplatform');
+  const { PredictionServiceClient } = aiplatform.v1;
+  const { helpers } = aiplatform; // helps construct protobuf.Value objects.
+  const clientOptions = { apiEndpoint: apiEndpoint };
+  const location = 'us-central1';
+  const endpoint = `projects/${project}/locations/${location}/publishers/google/models/${model}`;
+
+  const instances = texts.split(';').map((e) => helpers.toValue({ content: e, task_type: task }));
+  const parameters = helpers.toValue(
+    dimensionality > 0 ? { outputDimensionality: dimensionality } : {}
+  );
+  const request = { endpoint, instances, parameters };
+  const client = new PredictionServiceClient(clientOptions);
+  const [response] = await client.predict(request);
+  const predictions = response.predictions;
+  const embeddings = predictions.map((p: any) => {
+    const embeddingsProto = p.structValue.fields.embeddings;
+    const valuesProto = embeddingsProto.structValue.fields.values;
+    return valuesProto.listValue.values.map((v: any) => v.numberValue);
+  });
+  return JSON.stringify(embeddings);
+}
