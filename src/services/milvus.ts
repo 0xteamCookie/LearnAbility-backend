@@ -71,6 +71,7 @@ async function createCollection() {
   try {
     const collections = await client.showCollections();
     if (collections.data.some((c) => c.name === COLLECTION_NAME)) {
+      // await client.dropCollection({ collection_name: COLLECTION_NAME });
       console.log('Collection already exists, skipping...');
       return;
     }

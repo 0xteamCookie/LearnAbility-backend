@@ -30,6 +30,7 @@ const processFileAsync = async (
       pageContent: chunk.pageContent,
       metadata: { chunk_id: index },
     }));
+    console.log(output);
     await insertEmbeddings(output, userId);
     // Update the existing record instead of creating a new one
     await db.dataSource.update({
