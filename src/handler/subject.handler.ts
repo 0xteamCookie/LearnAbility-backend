@@ -9,10 +9,10 @@ import db from '../db/db';
 export const getAllSubjects = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-
+    
     const subjects = await db.subject.findMany({
       where: {
-        materials: {
+        dataSources: {
           some: {
             userId,
           },
@@ -20,12 +20,12 @@ export const getAllSubjects = async (req: Request, res: Response) => {
       },
       include: {
         _count: {
-          select: { materials: true },
+          select: { dataSources: true },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
-
+    
     return void res.json({
       success: true,
       subjects: subjects.map((subject) => ({
@@ -34,7 +34,7 @@ export const getAllSubjects = async (req: Request, res: Response) => {
         color: subject.color,
         createdAt: subject.createdAt,
         updatedAt: subject.updatedAt,
-        materialCount: subject._count.materials,
+        materialCount: subject._count.dataSources,
       })),
     });
   } catch (error) {
@@ -51,21 +51,21 @@ export const getAllSubjects = async (req: Request, res: Response) => {
 export const createSubject = async (req: Request, res: Response) => {
   try {
     const { name, color } = req.body;
-
+    
     if (!name) {
       return void res.status(400).json({
         success: false,
         message: 'Subject name is required',
       });
     }
-
+    
     const newSubject = await db.subject.create({
       data: {
         name,
         color: color || 'bg-blue-500',
       },
     });
-
+    
     return void res.status(201).json({
       success: true,
       subject: newSubject,
@@ -76,35 +76,6 @@ export const createSubject = async (req: Request, res: Response) => {
   }
 };
 
-// /**
-//  * @desc Update a subject
-//  * @route PUT /api/v1/pyos/subjects/:id
-//  * @protected
-//  */
-// export const updateSubject = async (req: Request, res: Response) => {
-//   try {
-//     const { id } = req.params;
-//     const { name, color } = req.body;
-
-//     const updatedSubject = await db.subject.update({
-//       where: { id },
-//       data: {
-//         name: name,
-//         color: color,
-//         updatedAt: new Date(),
-//       },
-//     });
-
-//     return void res.json({
-//       success: true,
-//       subject: updatedSubject,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     return void res.status(500).json({ success: false, message: 'Internal Server Error' });
-//   }
-// };
-
 /**
  * @desc Delete a subject
  * @route DELETE /api/v1/pyos/subjects/:id
@@ -113,11 +84,11 @@ export const createSubject = async (req: Request, res: Response) => {
 export const deleteSubject = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
+    
     await db.subject.delete({
       where: { id },
     });
-
+    
     return void res.json({
       success: true,
       message: 'Subject deleted successfully',

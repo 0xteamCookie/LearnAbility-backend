@@ -9,12 +9,12 @@ import db from '../db/db';
 export const getAllTags = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-
+    
     const tags = await db.tag.findMany({
       where: {
-        materials: {
+        dataSources: {
           some: {
-            material: {
+            dataSource: {
               userId,
             },
           },
@@ -22,18 +22,18 @@ export const getAllTags = async (req: Request, res: Response) => {
       },
       include: {
         _count: {
-          select: { materials: true },
+          select: { dataSources: true },
         },
       },
       orderBy: { name: 'asc' },
     });
-
+    
     return void res.json({
       success: true,
       tags: tags.map((tag) => ({
         id: tag.id,
         name: tag.name,
-        materialCount: tag._count.materials,
+        materialCount: tag._count.dataSources,
       })),
     });
   } catch (error) {
@@ -50,18 +50,18 @@ export const getAllTags = async (req: Request, res: Response) => {
 export const createTag = async (req: Request, res: Response) => {
   try {
     const { name } = req.body;
-
+    
     if (!name) {
       return void res.status(400).json({
         success: false,
         message: 'Tag name is required',
       });
     }
-
+    
     let tag = await db.tag.findFirst({
       where: { name: name.toLowerCase().trim() },
     });
-
+    
     if (tag) {
       return void res.json({
         success: true,
@@ -69,13 +69,13 @@ export const createTag = async (req: Request, res: Response) => {
         message: 'Tag already exists',
       });
     }
-
+    
     tag = await db.tag.create({
       data: {
         name: name.toLowerCase().trim(),
       },
     });
-
+    
     return void res.status(201).json({
       success: true,
       tag,
@@ -94,11 +94,11 @@ export const createTag = async (req: Request, res: Response) => {
 export const deleteTag = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
+    
     await db.tag.delete({
       where: { id },
     });
-
+    
     return void res.json({
       success: true,
       message: 'Tag deleted successfully',

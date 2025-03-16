@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,12 +8,12 @@ datasource db {
 }
 
 model User {
-  id              String   @id @default(uuid())
-  email           String   @unique
+  id              String        @id @default(uuid())
+  email           String        @unique
   password        String
   name            String
-  createdAt       DateTime @default(now())
-  syllabusContent String? // add it later after user uploads syllabus using gemini's OCR
+  createdAt       DateTime      @default(now())
+  syllabusContent String?
   standard        String
   interests       String
 
@@ -27,37 +21,99 @@ model User {
   aiChats     AIChat[]
   reminders   Reminder[]
   contents    AIContent[]
-  materials   Material[] // Add this line to establish bidirectional relation
 }
 
 model DataSource {
-  id          String           @id @default(uuid())
-  type        DataSourceType
-  fileType    String
-  name        String?
-  thumbnail   String?
-  content     String? // text/chunks/embeddings for RAG
-  subject     String?
-  topic       String?
-  description String?
-  tags        String[]         @default([])
-  source      String // URL or filename
-  status      DataSourceStatus
-  user        User             @relation(fields: [userId], references: [id])
-  userId      String
-  createdAt   DateTime         @default(now())
+  id           String           @id @default(uuid())
+  name         String
+  type         DataSourceType
+  fileType     String
+  size         Int              @default(0)
+  uploadDate   DateTime         @default(now())
+  source       String           // URL or filename
+  sourceUrl    String?          // External source URL
+  status       DataSourceStatus
+  progress     Int?             // Processing percentage
+  content      String?          // Extracted content for RAG
+  url          String?          // Path to file
+  
+  // Subject relation
+  subjectId    String?
+  subject      Subject?         @relation(fields: [subjectId], references: [id])
+  
+  // Topic relation
+  topicId      String?
+  topic        Topic?           @relation(fields: [topicId], references: [id])
+  
+  // Other fields
+  description  String?
+  thumbnail    String?
+  tags         DataSourceTag[]  // Changed to relation
+  
+  // User relation
+  userId       String
+  user         User             @relation(fields: [userId], references: [id])
+  createdAt    DateTime         @default(now())
 }
 
 enum DataSourceStatus {
   ERROR
   PROCESSING
   COMPLETED
+  READY
 }
 
 enum DataSourceType {
   WEBSITE
   TEXT
   DOCS
+  PDF
+  IMAGE
+  VIDEO
+  AUDIO
+  YOUTUBE
+}
+
+model Subject {
+  id            String       @id @default(uuid())
+  name          String
+  color         String       @default("bg-blue-500")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  materialCount Int          @default(0)
+
+  topics       Topic[]
+  dataSources  DataSource[]
+}
+
+model Topic {
+  id            String       @id @default(uuid())
+  name          String
+  subjectId     String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  materialCount Int          @default(0)
+
+  subject      Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  dataSources  DataSource[]
+}
+
+model Tag {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  materialCount Int            @default(0)
+
+  dataSources  DataSourceTag[]
+}
+
+model DataSourceTag {
+  dataSourceId String
+  tagId        String
+
+  dataSource  DataSource @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+  tag         Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([dataSourceId, tagId])
 }
 
 model AIChat {
@@ -87,72 +143,4 @@ model Reminder {
   user        User     @relation(fields: [userId], references: [id])
   userId      String
   createdAt   DateTime @default(now())
-}
-
-model Subject {
-  id            String   @id @default(uuid())
-  name          String
-  color         String   @default("bg-blue-500")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  materialCount Int      @default(0)
-
-  topics    Topic[]
-  materials Material[]
-}
-
-model Topic {
-  id            String   @id @default(uuid())
-  name          String
-  subjectId     String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  materialCount Int      @default(0)
-
-  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  materials Material[]
-}
-
-model Tag {
-  id            String @id @default(uuid())
-  name          String @unique
-  materialCount Int    @default(0)
-
-  materials MaterialTag[]
-}
-
-model Material {
-  id          String   @id @default(uuid())
-  name        String
-  type        String // pdf, png, xlsx, docx, youtube, etc.
-  size        Int      @default(0)
-  uploadDate  DateTime @default(now())
-  subjectId   String
-  topicId     String?
-  description String?
-  thumbnail   String?
-  status      String   @default("processing") // processing, ready, error
-  progress    Int? // processing progress percentage
-  url         String?
-  source      String // upload, youtube, etc.
-  sourceUrl   String? // for external sources
-  aiProcessed Boolean  @default(false)
-  aiSummary   String?
-  aiKeyPoints String[] @default([])
-  userId      String
-
-  subject Subject       @relation(fields: [subjectId], references: [id])
-  topic   Topic?        @relation(fields: [topicId], references: [id])
-  user    User          @relation(fields: [userId], references: [id])
-  tags    MaterialTag[]
-}
-
-model MaterialTag {
-  materialId String
-  tagId      String
-
-  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
-  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([materialId, tagId])
 }

@@ -31,6 +31,7 @@ const processFileAsync = async (
       metadata: { chunk_id: index },
     }));
     await insertEmbeddings(output, userId);
+
     // Update the existing record instead of creating a new one
     await db.dataSource.update({
       where: { id: dataSourceId },
@@ -56,102 +57,130 @@ const processFileAsync = async (
 };
 
 /**
- * @desc Create a new data source session with documents
+ * @desc Create a new data source
  * @route POST /api/v1/data-sources
  * @protected
  */
 export const createDataSource = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const sessionId = req.body.sessionId || `session-${Date.now()}`;
-    const subject = req.body.subject || undefined;
-    const thumbnail = req.body.thumbnail || undefined;
-    const topic = req.body.topic || undefined;
-    const tags = req.body.tags || undefined;
-    const description = req.body.description || undefined;
+    const {
+      name,
+      type,
+      subjectId,
+      topicId,
+      description,
+      tags,
+      source = 'upload',
+      sourceUrl,
+      content,
+    } = req.body;
 
-    // Handle multiple files
-    if (req.files && Array.isArray(req.files)) {
-      const files = req.files as Express.Multer.File[];
-
-      // Create initial records with PROCESSING status
-      const dataSources = await Promise.all(
-        files.map(async (file) => {
-          const fileType = path.extname(file.originalname).replace('.', '');
-          const name = file.originalname;
-
-          const initialDataSource = await db.dataSource.create({
-            data: {
-              name,
-              fileType: fileType,
-              subject,
-              thumbnail,
-              topic,
-              tags,
-              description,
-              type: DataSourceType.TEXT,
-              source: `${file.originalname}|session:${sessionId}`,
-              content: null,
-              status: DataSourceStatus.PROCESSING,
-              userId,
-            },
-          });
-          return initialDataSource;
-        })
-      );
-
-      // Start processing each file in background
-      for (const [index, file] of files.entries()) {
-        const dataSourceId = dataSources[index].id;
-
-        // Process file and update the same record (don't create new one)
-        processFileAsync(file, dataSourceId, userId, sessionId).catch((error) => {
-          console.error(`Background processing error for ${file.originalname}:`, error);
-        });
-      }
-
-      return void res.status(202).json({
-        success: true,
-        message: `Processing ${files.length} documents in the background`,
-        dataSources,
-        sessionId,
-      });
-    } else {
-      const { type, source, content } = req.body;
-
-      if (!type || !source) {
-        return void res.status(400).json({
-          success: false,
-          message: 'Type and source are required',
-        });
-      }
-
-      if (!Object.values(DataSourceType).includes(type)) {
-        return void res.status(400).json({
-          success: false,
-          message: `Type must be one of: ${Object.values(DataSourceType).join(', ')}`,
-        });
-      }
-
-      // Create data source directly with COMPLETED status
-      const dataSource = await db.dataSource.create({
-        data: {
-          fileType: '',
-          type,
-          source: sessionId ? `${source}|session:${sessionId}` : source,
-          content: content || null,
-          status: DataSourceStatus.COMPLETED,
-          userId,
-        },
-      });
-
-      return void res.status(201).json({
-        success: true,
-        message: 'Data source created successfully',
-        dataSourceId: dataSource.id,
-        sessionId,
+    if (!name || !type) {
+      return void res.status(400).json({
+        success: false,
+        message: 'Name and type are required',
       });
     }
+
+    if (subjectId) {
+      // Check if subject exists
+      const subject = await db.subject.findUnique({
+        where: { id: subjectId },
+      });
+
+      if (!subject) {
+        return void res.status(404).json({
+          success: false,
+          message: 'Subject not found',
+        });
+      }
+    }
+
+    if (topicId) {
+      // Check if topic exists
+      const topic = await db.topic.findUnique({
+        where: { id: topicId },
+      });
+
+      if (!topic) {
+        return void res.status(404).json({
+          success: false,
+          message: 'Topic not found',
+        });
+      }
+    }
+
+    let size = 0;
+    let url = null;
+    let thumbnail = null;
+    let fileType = '';
+
+    // Handle file upload
+    if (req.file) {
+      size = req.file.size;
+      fileType = path.extname(req.file.originalname).replace('.', '');
+      url = `/uploads/${req.file.filename}`;
+      thumbnail = url; // Use the file as thumbnail (simplified)
+    }
+
+    // Create data source
+    const dataSource = await db.dataSource.create({
+      data: {
+        name,
+        type: type as DataSourceType,
+        fileType,
+        size,
+        subjectId: subjectId || null,
+        topicId: topicId || null,
+        description,
+        thumbnail,
+        url,
+        source,
+        sourceUrl,
+        content: content || null,
+        status: req.file ? DataSourceStatus.PROCESSING : DataSourceStatus.READY,
+        userId,
+      },
+    });
+
+    // Process tags
+    if (tags) {
+      const tagArray = Array.isArray(tags) ? tags : [tags];
+
+      for (const tagName of tagArray) {
+        // Find or create tag
+        let tag = await db.tag.findFirst({
+          where: { name: tagName.toLowerCase().trim() },
+        });
+
+        if (!tag) {
+          tag = await db.tag.create({
+            data: { name: tagName.toLowerCase().trim() },
+          });
+        }
+
+        // Create association
+        await db.dataSourceTag.create({
+          data: {
+            dataSourceId: dataSource.id,
+            tagId: tag.id,
+          },
+        });
+      }
+    }
+
+    // Start processing file if uploaded
+    if (req.file) {
+      processFileAsync(req.file, dataSource.id, userId).catch((error) => {
+        console.error(`Background processing error for ${req.file?.originalname}:`, error);
+      });
+    }
+
+    return void res.status(201).json({
+      success: true,
+      material: dataSource,
+    });
   } catch (error) {
     console.error(error);
     return void res.status(500).json({
@@ -163,48 +192,72 @@ export const createDataSource = async (req: Request, res: Response) => {
 };
 
 /**
- * @desc Get all data sources for a user
+ * @desc Get all data sources/materials
  * @route GET /api/v1/data-sources
  * @protected
  */
-export const getDataSources = async (req: Request, res: Response) => {
+export const getAllDataSources = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const { sessionId } = req.query;
+    const { subjectId, topicId, tags, type, status } = req.query;
 
-    let whereClause: any = { userId };
+    const whereClause: any = { userId };
 
-    if (sessionId) {
-      whereClause.source = { contains: `|session:${sessionId}` };
+    if (subjectId) whereClause.subjectId = subjectId as string;
+    if (topicId) whereClause.topicId = topicId as string;
+    if (type) whereClause.type = type as string;
+    if (status) whereClause.status = status as string;
+
+    if (tags) {
+      whereClause.tags = {
+        some: {
+          tag: {
+            name: {
+              in: Array.isArray(tags) ? tags : [tags as string],
+            },
+          },
+        },
+      };
     }
 
     const dataSources = await db.dataSource.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      include: {
+        subject: true,
+        topic: true,
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
+      orderBy: { uploadDate: 'desc' },
     });
 
-    const processedSources = dataSources.map((ds) => {
-      const source = ds.source.includes('|session:') ? ds.source.split('|session:')[0] : ds.source;
-
-      return {
-        id: ds.id,
-        type: ds.type,
-        name: ds.name,
-        source,
-        fileType: ds.fileType,
-        status: ds.status,
-        subject: ds.subject,
-        thumbnail: ds.thumbnail,
-        topic: ds.topic,
-        tags: ds.tags,
-        createdAt: ds.createdAt,
-
-        sessionId: ds.source.includes('|session:') ? ds.source.split('|session:')[1] : null,
-      };
-    });
     return void res.json({
       success: true,
-      dataSources: processedSources,
+      materials: dataSources.map((dataSource) => ({
+        id: dataSource.id,
+        name: dataSource.name,
+        type: dataSource.type,
+        size: dataSource.size,
+        uploadDate: dataSource.uploadDate,
+        subjectId: dataSource.subjectId,
+        subjectName: dataSource.subject?.name,
+        subjectColor: dataSource.subject?.color,
+        topicId: dataSource.topicId,
+        topicName: dataSource.topic?.name,
+        description: dataSource.description,
+        tags: dataSource.tags.map((dt) => dt.tag.name),
+        thumbnail: dataSource.thumbnail,
+        status: dataSource.status,
+        progress: dataSource.progress,
+        url: dataSource.url,
+        source: dataSource.source,
+        sourceUrl: dataSource.sourceUrl,
+        contentPreview: dataSource.content ? dataSource.content.substring(0, 150) + '...' : null,
+        hasContent: !!dataSource.content,
+      })),
     });
   } catch (error) {
     console.error(error);
@@ -213,7 +266,7 @@ export const getDataSources = async (req: Request, res: Response) => {
 };
 
 /**
- * @desc Get a specific data source
+ * @desc Get data source by id
  * @route GET /api/v1/data-sources/:id
  * @protected
  */
@@ -222,39 +275,34 @@ export const getDataSourceById = async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { id } = req.params;
 
-    const dataSource = await db.dataSource.findUnique({
-      where: { id, userId },
+    const dataSource = await db.dataSource.findFirst({
+      where: {
+        id,
+        userId,
+      },
+      include: {
+        subject: true,
+        topic: true,
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
     });
 
     if (!dataSource) {
-      return void res.status(404).json({ success: false, message: 'Data source not found' });
-    }
-
-    let sessionId = null;
-    let cleanSource = dataSource.source;
-
-    if (dataSource.source.includes('|session:')) {
-      const parts = dataSource.source.split('|session:');
-      cleanSource = parts[0];
-      sessionId = parts[1];
+      return void res.status(404).json({
+        success: false,
+        message: 'Material not found',
+      });
     }
 
     return void res.json({
       success: true,
-      dataSource: {
-        id: dataSource.id,
-        type: dataSource.type,
-        fileType: dataSource.fileType,
-        subject: dataSource.subject,
-        thumbnail: dataSource.thumbnail,
-        description: dataSource.description,
-        topic: dataSource.topic,
-        tags: dataSource.tags,
-        source: cleanSource,
-        content: dataSource.content,
-        status: dataSource.status,
-        createdAt: dataSource.createdAt,
-        sessionId,
+      material: {
+        ...dataSource,
+        tags: dataSource.tags.map((dt) => dt.tag.name),
       },
     });
   } catch (error) {
@@ -264,54 +312,42 @@ export const getDataSourceById = async (req: Request, res: Response) => {
 };
 
 /**
- * @desc Get status of all documents in a session
- * @route GET /api/v1/data-sources/sessions/:sessionId
+ * @desc Delete data source
+ * @route DELETE /api/v1/data-sources/:id
  * @protected
  */
-export const getSessionStatus = async (req: Request, res: Response) => {
+export const deleteDataSource = async (req: Request, res: Response) => {
   try {
+    const { id } = req.params;
     const userId = (req as any).userId;
-    const { sessionId } = req.params;
 
-    if (!sessionId) {
-      return void res.status(400).json({
+    const dataSource = await db.dataSource.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
+
+    if (!dataSource) {
+      return void res.status(404).json({
         success: false,
-        message: 'Session ID is required',
+        message: 'Material not found',
       });
     }
 
-    const dataSources = await db.dataSource.findMany({
-      where: {
-        userId,
-        source: { contains: `|session:${sessionId}` },
-      },
-      orderBy: { createdAt: 'desc' },
+    // Delete related tags first
+    await db.dataSourceTag.deleteMany({
+      where: { dataSourceId: id },
     });
 
-    const completed = dataSources.filter((ds) => ds.status === DataSourceStatus.COMPLETED).length;
-    const processing = dataSources.filter((ds) => ds.status === DataSourceStatus.PROCESSING).length;
-    const error = dataSources.filter((ds) => ds.status === DataSourceStatus.ERROR).length;
-    const total = dataSources.length;
-
-    const sources = dataSources.map((ds) => ({
-      id: ds.id,
-      type: ds.type,
-      source: ds.source.split('|session:')[0],
-      status: ds.status,
-      createdAt: ds.createdAt,
-    }));
+    // Delete the data source
+    await db.dataSource.delete({
+      where: { id },
+    });
 
     return void res.json({
       success: true,
-      sessionId,
-      status: {
-        completed,
-        processing,
-        error,
-        total,
-        isComplete: processing === 0,
-      },
-      sources,
+      message: 'Material deleted successfully',
     });
   } catch (error) {
     console.error(error);
