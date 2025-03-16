@@ -10,15 +10,10 @@ export const getAllTags = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
     
+    // Changed to query by userId directly
     const tags = await db.tag.findMany({
       where: {
-        dataSources: {
-          some: {
-            dataSource: {
-              userId,
-            },
-          },
-        },
+        userId,
       },
       include: {
         _count: {
@@ -50,6 +45,7 @@ export const getAllTags = async (req: Request, res: Response) => {
 export const createTag = async (req: Request, res: Response) => {
   try {
     const { name } = req.body;
+    const userId = (req as any).userId;
     
     if (!name) {
       return void res.status(400).json({
@@ -59,7 +55,10 @@ export const createTag = async (req: Request, res: Response) => {
     }
     
     let tag = await db.tag.findFirst({
-      where: { name: name.toLowerCase().trim() },
+      where: { 
+        name: name.toLowerCase().trim(),
+        userId, // Only check for existing tag for this user
+      },
     });
     
     if (tag) {
@@ -73,6 +72,7 @@ export const createTag = async (req: Request, res: Response) => {
     tag = await db.tag.create({
       data: {
         name: name.toLowerCase().trim(),
+        userId, // Add userId to associate tag with user
       },
     });
     
@@ -94,6 +94,22 @@ export const createTag = async (req: Request, res: Response) => {
 export const deleteTag = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req as any).userId;
+    
+    // Check if tag belongs to user before deleting
+    const tag = await db.tag.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
+    
+    if (!tag) {
+      return void res.status(404).json({
+        success: false,
+        message: 'Tag not found or not owned by user',
+      });
+    }
     
     await db.tag.delete({
       where: { id },

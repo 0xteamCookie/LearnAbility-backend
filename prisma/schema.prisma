@@ -21,6 +21,9 @@ model User {
   aiChats     AIChat[]
   reminders   Reminder[]
   contents    AIContent[]
+  subjects    Subject[]      // For relation
+  topics      Topic[]        // For relation
+  tags        Tag[]          // For relation
 }
 
 model DataSource {
@@ -82,6 +85,10 @@ model Subject {
   updatedAt     DateTime     @updatedAt
   materialCount Int          @default(0)
 
+  // Add user relation
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+
   topics       Topic[]
   dataSources  DataSource[]
 }
@@ -94,6 +101,10 @@ model Topic {
   updatedAt     DateTime     @updatedAt
   materialCount Int          @default(0)
 
+  // Add user relation
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+
   subject      Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   dataSources  DataSource[]
 }
@@ -102,6 +113,10 @@ model Tag {
   id            String         @id @default(uuid())
   name          String         @unique
   materialCount Int            @default(0)
+
+  // Add user relation
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
 
   dataSources  DataSourceTag[]
 }

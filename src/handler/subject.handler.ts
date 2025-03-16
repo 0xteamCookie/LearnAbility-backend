@@ -10,13 +10,10 @@ export const getAllSubjects = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
     
+    // Changed to query by userId directly instead of through dataSources
     const subjects = await db.subject.findMany({
       where: {
-        dataSources: {
-          some: {
-            userId,
-          },
-        },
+        userId,
       },
       include: {
         _count: {
@@ -51,6 +48,7 @@ export const getAllSubjects = async (req: Request, res: Response) => {
 export const createSubject = async (req: Request, res: Response) => {
   try {
     const { name, color } = req.body;
+    const userId = (req as any).userId;
     
     if (!name) {
       return void res.status(400).json({
@@ -63,6 +61,7 @@ export const createSubject = async (req: Request, res: Response) => {
       data: {
         name,
         color: color || 'bg-blue-500',
+        userId, // Add userId to associate subject with user
       },
     });
     
@@ -84,6 +83,22 @@ export const createSubject = async (req: Request, res: Response) => {
 export const deleteSubject = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req as any).userId;
+    
+    // Check if subject belongs to user before deleting
+    const subject = await db.subject.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
+    
+    if (!subject) {
+      return void res.status(404).json({
+        success: false,
+        message: 'Subject not found or not owned by user',
+      });
+    }
     
     await db.subject.delete({
       where: { id },
