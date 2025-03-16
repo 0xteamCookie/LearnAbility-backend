@@ -2,7 +2,6 @@ node_modules
 .vscode
 .env
 dist
-prisma/migrations
 learnability-project-9c532bb8d8a5.json
 uploads
 test-files

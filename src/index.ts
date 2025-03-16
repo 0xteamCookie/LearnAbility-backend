@@ -6,6 +6,7 @@ import { dataSourceRoutes } from './routes/source.routes';
 import { queryRoutes } from './routes/query.routes';
 import { syllabusRoutes } from './routes/syllabus.routes';
 import { feedRoutes } from './routes/feed.routes';
+import { pyosRoutes } from './routes/pyos.routes';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use('/api/v1/data-sources', dataSourceRoutes);
 app.use('/api/v1/user-query', queryRoutes);
 app.use('/api/v1/syllabus', syllabusRoutes);
 app.use('/api/v1/feed', feedRoutes);
+app.use('/api/v1/pyos', pyosRoutes);
 
 const PORT = process.env.PORT || 30000;
 
