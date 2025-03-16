@@ -74,7 +74,7 @@ export const createDataSource = async (req: Request, res: Response) => {
       const files = req.files as Express.Multer.File[];
 
       // Create initial records with PROCESSING status
-      const dataSourceIds = await Promise.all(
+      const dataSources = await Promise.all(
         files.map(async (file) => {
           const fileType = path.extname(file.originalname);
           const initialDataSource = await db.dataSource.create({
@@ -97,7 +97,7 @@ export const createDataSource = async (req: Request, res: Response) => {
 
       // Start processing each file in background
       for (const [index, file] of files.entries()) {
-        const dataSourceId = dataSourceIds[index];
+        const dataSourceId = dataSources[index];
 
         // Process file and update the same record (don't create new one)
         processFileAsync(file, dataSourceId, userId, sessionId).catch((error) => {
@@ -108,7 +108,7 @@ export const createDataSource = async (req: Request, res: Response) => {
       return void res.status(202).json({
         success: true,
         message: `Processing ${files.length} documents in the background`,
-        dataSourceIds,
+        dataSources,
         sessionId,
       });
     } else {
