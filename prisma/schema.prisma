@@ -34,12 +34,13 @@ model DataSource {
   id        String           @id @default(uuid())
   type      DataSourceType
   fileType String
+  name String?
   thumbnail String?
   content   String?          // text/chunks/embeddings for RAG
   subject   String?
   topic String?
   description String?
-  tags String?
+  tags String[] @default([])
   source    String           // URL or filename
   status    DataSourceStatus 
   user      User             @relation(fields: [userId], references: [id])
