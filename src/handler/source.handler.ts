@@ -18,7 +18,6 @@ const processFileAsync = async (
   try {
     const filePath = file.path;
 
-    // Extract text from document
     const extractedText = await extractTextFromDocument(filePath);
     const textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: 2000,
@@ -33,7 +32,6 @@ const processFileAsync = async (
     console.log(output);
     await insertEmbeddings(output, userId);
 
-    // Update the existing record instead of creating a new one
     await db.dataSource.update({
       where: { id: dataSourceId },
       data: {
@@ -44,7 +42,6 @@ const processFileAsync = async (
   } catch (error) {
     console.error(`Error processing file ${file.originalname}:`, error);
 
-    // Update with error status instead of creating a new record
     await db.dataSource.update({
       where: { id: dataSourceId },
       data: {
@@ -66,8 +63,6 @@ export const createDataSource = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
     const {
-      name,
-      type,
       subjectId,
       topicId,
       description,
@@ -77,19 +72,8 @@ export const createDataSource = async (req: Request, res: Response) => {
       content,
     } = req.body;
 
-    if (!name || !type) {
-      return void res.status(400).json({
-        success: false,
-        message: 'Name and type are required',
-      });
-    }
-
     if (subjectId) {
-      // Check if subject exists
-      const subject = await db.subject.findUnique({
-        where: { id: subjectId },
-      });
-
+      const subject = await db.subject.findUnique({ where: { id: subjectId } });
       if (!subject) {
         return void res.status(404).json({
           success: false,
@@ -99,11 +83,7 @@ export const createDataSource = async (req: Request, res: Response) => {
     }
 
     if (topicId) {
-      // Check if topic exists
-      const topic = await db.topic.findUnique({
-        where: { id: topicId },
-      });
-
+      const topic = await db.topic.findUnique({ where: { id: topicId } });
       if (!topic) {
         return void res.status(404).json({
           success: false,
@@ -112,76 +92,192 @@ export const createDataSource = async (req: Request, res: Response) => {
       }
     }
 
-    let size = 0;
-    let url = null;
-    let thumbnail = null;
-    let fileType = '';
+    const getFileType = (filename: string): DataSourceType => {
+      const ext = path.extname(filename).toLowerCase();
 
-    // Handle file upload
-    if (req.file) {
-      size = req.file.size;
-      fileType = path.extname(req.file.originalname).replace('.', '');
-      url = `/uploads/${req.file.filename}`;
-      thumbnail = url; // Use the file as thumbnail (simplified)
-    }
+      if (['.pdf'].includes(ext)) return DataSourceType.PDF;
+      if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) return DataSourceType.IMAGE;
+      if (['.doc', '.docx', '.txt', '.rtf'].includes(ext)) return DataSourceType.DOCS;
+      // if (['.mp4', '.avi', '.mov', '.wmv'].includes(ext)) return DataSourceType.VIDEO;
+      // if (['.mp3', '.wav', '.ogg'].includes(ext)) return DataSourceType.AUDIO;
 
-    // Create data source
-    const dataSource = await db.dataSource.create({
-      data: {
-        name,
-        type: type as DataSourceType,
-        fileType,
-        size,
-        subjectId: subjectId || null,
-        topicId: topicId || null,
-        description,
-        thumbnail,
-        url,
-        source,
-        sourceUrl,
-        content: content || null,
-        status: req.file ? DataSourceStatus.PROCESSING : DataSourceStatus.READY,
-        userId,
-      },
-    });
+      return DataSourceType.TEXT;
+    };
 
-    // Process tags
-    if (tags) {
-      const tagArray = Array.isArray(tags) ? tags : [tags];
+    if (req.files && Array.isArray(req.files)) {
+      const files = req.files as Express.Multer.File[];
+      const materials = [];
 
-      for (const tagName of tagArray) {
-        // Find or create tag
-        let tag = await db.tag.findFirst({
-          where: { name: tagName.toLowerCase().trim() },
-        });
+      for (const file of files) {
+        const name = req.body.name || file.originalname;
+        const type = req.body.type || getFileType(file.originalname);
+        const fileType = path.extname(file.originalname).replace('.', '');
+        const size = file.size;
+        const url = `/uploads/${file.filename}`;
+        const thumbnail = url;
 
-        if (!tag) {
-          tag = await db.tag.create({
-            data: { name: tagName.toLowerCase().trim() },
-          });
-        }
-
-        // Create association
-        await db.dataSourceTag.create({
+        const dataSource = await db.dataSource.create({
           data: {
-            dataSourceId: dataSource.id,
-            tagId: tag.id,
+            name,
+            type: type as DataSourceType,
+            fileType,
+            size,
+            subjectId: subjectId || null,
+            topicId: topicId || null,
+            description,
+            thumbnail,
+            url,
+            source,
+            sourceUrl,
+            content: content || null,
+            status: DataSourceStatus.PROCESSING,
+            userId,
           },
         });
-      }
-    }
 
-    // Start processing file if uploaded
-    if (req.file) {
-      processFileAsync(req.file, dataSource.id, userId).catch((error) => {
-        console.error(`Background processing error for ${req.file?.originalname}:`, error);
+        if (tags) {
+          const tagArray = Array.isArray(tags) ? tags : [tags];
+          for (const tagName of tagArray) {
+            let tag = await db.tag.findFirst({
+              where: { name: tagName.toLowerCase().trim() },
+            });
+
+            if (!tag) {
+              tag = await db.tag.create({
+                data: { name: tagName.toLowerCase().trim() },
+              });
+            }
+
+            await db.dataSourceTag.create({
+              data: { dataSourceId: dataSource.id, tagId: tag.id },
+            });
+          }
+        }
+
+        processFileAsync(file, dataSource.id, userId).catch((error) => {
+          console.error(`Background processing error for ${file.originalname}:`, error);
+        });
+
+        materials.push(dataSource);
+      }
+
+      return void res.status(201).json({
+        success: true,
+        message: `Successfully uploaded ${materials.length} files`,
+        materials,
+      });
+    } else if (req.file) {
+      const file = req.file;
+      const name = req.body.name || file.originalname;
+      const type = req.body.type || getFileType(file.originalname);
+      const fileType = path.extname(file.originalname).replace('.', '');
+      const size = file.size;
+      const url = `/uploads/${file.filename}`;
+      const thumbnail = url;
+
+      const dataSource = await db.dataSource.create({
+        data: {
+          name,
+          type: type as DataSourceType,
+          fileType,
+          size,
+          subjectId: subjectId || null,
+          topicId: topicId || null,
+          description,
+          thumbnail,
+          url,
+          source,
+          sourceUrl,
+          content: content || null,
+          status: DataSourceStatus.PROCESSING,
+          userId,
+        },
+      });
+
+      if (tags) {
+        const tagArray = Array.isArray(tags) ? tags : [tags];
+        for (const tagName of tagArray) {
+          let tag = await db.tag.findFirst({
+            where: { name: tagName.toLowerCase().trim() },
+          });
+
+          if (!tag) {
+            tag = await db.tag.create({
+              data: { name: tagName.toLowerCase().trim() },
+            });
+          }
+
+          await db.dataSourceTag.create({
+            data: { dataSourceId: dataSource.id, tagId: tag.id },
+          });
+        }
+      }
+
+      console.log('Processing file:', file.originalname);
+      processFileAsync(file, dataSource.id, userId).catch((error) => {
+        console.error(`Background processing error for ${file.originalname}:`, error);
+      });
+
+      return void res.status(201).json({
+        success: true,
+        material: dataSource,
+      });
+    } else if (content) {
+      if (!req.body.name || !req.body.type) {
+        return void res.status(400).json({
+          success: false,
+          message: 'Name and type are required when providing direct content',
+        });
+      }
+
+      const dataSource = await db.dataSource.create({
+        data: {
+          name: req.body.name,
+          type: req.body.type as DataSourceType,
+          fileType: '',
+          size: 0,
+          subjectId: subjectId || null,
+          topicId: topicId || null,
+          description,
+          thumbnail: null,
+          url: null,
+          source,
+          sourceUrl,
+          content,
+          status: DataSourceStatus.READY,
+          userId,
+        },
+      });
+
+      if (tags) {
+        const tagArray = Array.isArray(tags) ? tags : [tags];
+        for (const tagName of tagArray) {
+          let tag = await db.tag.findFirst({
+            where: { name: tagName.toLowerCase().trim() },
+          });
+
+          if (!tag) {
+            tag = await db.tag.create({
+              data: { name: tagName.toLowerCase().trim() },
+            });
+          }
+
+          await db.dataSourceTag.create({
+            data: { dataSourceId: dataSource.id, tagId: tag.id },
+          });
+        }
+      }
+
+      return void res.status(201).json({
+        success: true,
+        material: dataSource,
+      });
+    } else {
+      return void res.status(400).json({
+        success: false,
+        message: 'Either a file or content must be provided',
       });
     }
-
-    return void res.status(201).json({
-      success: true,
-      material: dataSource,
-    });
   } catch (error) {
     console.error(error);
     return void res.status(500).json({
@@ -336,12 +432,10 @@ export const deleteDataSource = async (req: Request, res: Response) => {
       });
     }
 
-    // Delete related tags first
     await db.dataSourceTag.deleteMany({
       where: { dataSourceId: id },
     });
 
-    // Delete the data source
     await db.dataSource.delete({
       where: { id },
     });
