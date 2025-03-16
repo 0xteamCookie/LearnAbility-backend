@@ -11,14 +11,11 @@ export const getSubjectTopics = async (req: Request, res: Response) => {
     const { subjectId } = req.params;
     const userId = (req as any).userId;
     
+    // Changed to query by userId directly
     const topics = await db.topic.findMany({
       where: {
         subjectId,
-        dataSources: {
-          some: {
-            userId,
-          },
-        },
+        userId,
       },
       include: {
         _count: {
@@ -54,6 +51,7 @@ export const createTopic = async (req: Request, res: Response) => {
   try {
     const { subjectId } = req.params;
     const { name } = req.body;
+    const userId = (req as any).userId;
     
     if (!name) {
       return void res.status(400).json({
@@ -62,14 +60,17 @@ export const createTopic = async (req: Request, res: Response) => {
       });
     }
     
-    const subject = await db.subject.findUnique({
-      where: { id: subjectId },
+    const subject = await db.subject.findFirst({
+      where: { 
+        id: subjectId,
+        userId, // Ensure subject belongs to user
+      },
     });
     
     if (!subject) {
       return void res.status(404).json({
         success: false,
-        message: 'Subject not found',
+        message: 'Subject not found or not owned by user',
       });
     }
     
@@ -77,6 +78,7 @@ export const createTopic = async (req: Request, res: Response) => {
       data: {
         name,
         subjectId,
+        userId, // Add userId to associate topic with user
       },
     });
     
@@ -98,6 +100,22 @@ export const createTopic = async (req: Request, res: Response) => {
 export const deleteTopic = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req as any).userId;
+    
+    // Check if topic belongs to user before deleting
+    const topic = await db.topic.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
+    
+    if (!topic) {
+      return void res.status(404).json({
+        success: false,
+        message: 'Topic not found or not owned by user',
+      });
+    }
     
     await db.topic.delete({
       where: { id },

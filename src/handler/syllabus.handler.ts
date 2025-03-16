@@ -107,15 +107,21 @@ export const uploadSyllabus = async (req: Request, res: Response) => {
           const tagArray = Array.isArray(tags) ? tags : [tags];
           for (const tagName of tagArray) {
             let tag = await db.tag.findFirst({
-              where: { name: tagName.toLowerCase().trim() },
+              where: { 
+                name: tagName.toLowerCase().trim(),
+                userId, // Only check for existing tags for this user
+              },
             });
-
+        
             if (!tag) {
               tag = await db.tag.create({
-                data: { name: tagName.toLowerCase().trim() },
+                data: { 
+                  name: tagName.toLowerCase().trim(),
+                  userId, // Associate tag with user
+                },
               });
             }
-
+        
             await db.dataSourceTag.create({
               data: { dataSourceId: dataSource.id, tagId: tag.id },
             });
@@ -164,15 +170,21 @@ export const uploadSyllabus = async (req: Request, res: Response) => {
         const tagArray = Array.isArray(tags) ? tags : [tags];
         for (const tagName of tagArray) {
           let tag = await db.tag.findFirst({
-            where: { name: tagName.toLowerCase().trim() },
+            where: { 
+              name: tagName.toLowerCase().trim(),
+              userId, // Only check for existing tags for this user
+            },
           });
-
+      
           if (!tag) {
             tag = await db.tag.create({
-              data: { name: tagName.toLowerCase().trim() },
+              data: { 
+                name: tagName.toLowerCase().trim(),
+                userId, // Associate tag with user
+              },
             });
           }
-
+      
           await db.dataSourceTag.create({
             data: { dataSourceId: dataSource.id, tagId: tag.id },
           });
@@ -240,15 +252,21 @@ export const uploadSyllabus = async (req: Request, res: Response) => {
         const tagArray = Array.isArray(tags) ? tags : [tags];
         for (const tagName of tagArray) {
           let tag = await db.tag.findFirst({
-            where: { name: tagName.toLowerCase().trim() },
+            where: { 
+              name: tagName.toLowerCase().trim(),
+              userId, // Only check for existing tags for this user
+            },
           });
-
+      
           if (!tag) {
             tag = await db.tag.create({
-              data: { name: tagName.toLowerCase().trim() },
+              data: { 
+                name: tagName.toLowerCase().trim(),
+                userId, // Associate tag with user
+              },
             });
           }
-
+      
           await db.dataSourceTag.create({
             data: { dataSourceId: dataSource.id, tagId: tag.id },
           });
