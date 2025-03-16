@@ -68,6 +68,7 @@ export const createDataSource = async (req: Request, res: Response) => {
     const thumbnail = req.body.thumbnail || undefined;
     const topic = req.body.topic || undefined;
     const tags = req.body.tags || undefined;
+    const description = req.body.description || undefined;
 
     // Handle multiple files
     if (req.files && Array.isArray(req.files)) {
@@ -76,14 +77,18 @@ export const createDataSource = async (req: Request, res: Response) => {
       // Create initial records with PROCESSING status
       const dataSources = await Promise.all(
         files.map(async (file) => {
-          const fileType = path.extname(file.originalname);
+          const fileType = path.extname(file.originalname).replace('.', '');
+          const name = file.originalname;
+
           const initialDataSource = await db.dataSource.create({
             data: {
+              name,
               fileType: fileType,
               subject,
               thumbnail,
               topic,
               tags,
+              description,
               type: DataSourceType.TEXT,
               source: `${file.originalname}|session:${sessionId}`,
               content: null,
@@ -91,13 +96,13 @@ export const createDataSource = async (req: Request, res: Response) => {
               userId,
             },
           });
-          return initialDataSource.id;
+          return initialDataSource;
         })
       );
 
       // Start processing each file in background
       for (const [index, file] of files.entries()) {
-        const dataSourceId = dataSources[index];
+        const dataSourceId = dataSources[index].id;
 
         // Process file and update the same record (don't create new one)
         processFileAsync(file, dataSourceId, userId, sessionId).catch((error) => {
@@ -184,6 +189,7 @@ export const getDataSources = async (req: Request, res: Response) => {
       return {
         id: ds.id,
         type: ds.type,
+        name: ds.name,
         source,
         fileType: ds.fileType,
         status: ds.status,
@@ -196,7 +202,6 @@ export const getDataSources = async (req: Request, res: Response) => {
         sessionId: ds.source.includes('|session:') ? ds.source.split('|session:')[1] : null,
       };
     });
-
     return void res.json({
       success: true,
       dataSources: processedSources,
@@ -242,6 +247,7 @@ export const getDataSourceById = async (req: Request, res: Response) => {
         fileType: dataSource.fileType,
         subject: dataSource.subject,
         thumbnail: dataSource.thumbnail,
+        description: dataSource.description,
         topic: dataSource.topic,
         tags: dataSource.tags,
         source: cleanSource,
