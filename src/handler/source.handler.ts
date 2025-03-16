@@ -4,6 +4,7 @@ import { DataSourceStatus, DataSourceType } from '@prisma/client';
 import { extractTextFromDocument } from '../services/gemini.service';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { insertEmbeddings } from '../services/milvus';
+import path from 'path';
 
 /**
  * Process a file asynchronously and update the existing record
@@ -63,6 +64,10 @@ export const createDataSource = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
     const sessionId = req.body.sessionId || `session-${Date.now()}`;
+    const subject = req.body.subject || undefined;
+    const thumbnail = req.body.thumbnail || undefined;
+    const topic = req.body.topic || undefined;
+    const tags = req.body.tags || undefined;
 
     // Handle multiple files
     if (req.files && Array.isArray(req.files)) {
@@ -71,8 +76,14 @@ export const createDataSource = async (req: Request, res: Response) => {
       // Create initial records with PROCESSING status
       const dataSourceIds = await Promise.all(
         files.map(async (file) => {
+          const fileType = path.extname(file.originalname);
           const initialDataSource = await db.dataSource.create({
             data: {
+              fileType: fileType,
+              subject,
+              thumbnail,
+              topic,
+              tags,
               type: DataSourceType.TEXT,
               source: `${file.originalname}|session:${sessionId}`,
               content: null,
@@ -100,36 +111,7 @@ export const createDataSource = async (req: Request, res: Response) => {
         dataSourceIds,
         sessionId,
       });
-    }
-    // Handle single file
-    else if (req.file) {
-      const file = req.file;
-
-      // Create initial record with PROCESSING status
-      const dataSource = await db.dataSource.create({
-        data: {
-          type: DataSourceType.TEXT,
-          source: `${file.originalname}|session:${sessionId}`,
-          content: null,
-          status: DataSourceStatus.PROCESSING,
-          userId,
-        },
-      });
-
-      // Process file and update the same record
-      processFileAsync(file, dataSource.id, userId, sessionId).catch((error) => {
-        console.error(`Background processing error for ${file.originalname}:`, error);
-      });
-
-      return void res.status(202).json({
-        success: true,
-        message: 'Document processing started',
-        dataSourceId: dataSource.id,
-        sessionId,
-      });
-    }
-    // Handle direct JSON input (no files)
-    else {
+    } else {
       const { type, source, content } = req.body;
 
       if (!type || !source) {
@@ -149,6 +131,7 @@ export const createDataSource = async (req: Request, res: Response) => {
       // Create data source directly with COMPLETED status
       const dataSource = await db.dataSource.create({
         data: {
+          fileType: '',
           type,
           source: sessionId ? `${source}|session:${sessionId}` : source,
           content: content || null,
@@ -202,7 +185,12 @@ export const getDataSources = async (req: Request, res: Response) => {
         id: ds.id,
         type: ds.type,
         source,
+        fileType: ds.fileType,
         status: ds.status,
+        subject: ds.subject,
+        thumbnail: ds.thumbnail,
+        topic: ds.topic,
+        tags: ds.tags,
         createdAt: ds.createdAt,
 
         sessionId: ds.source.includes('|session:') ? ds.source.split('|session:')[1] : null,
@@ -251,6 +239,11 @@ export const getDataSourceById = async (req: Request, res: Response) => {
       dataSource: {
         id: dataSource.id,
         type: dataSource.type,
+        fileType: dataSource.fileType,
+        subject: dataSource.subject,
+        thumbnail: dataSource.thumbnail,
+        topic: dataSource.topic,
+        tags: dataSource.tags,
         source: cleanSource,
         content: dataSource.content,
         status: dataSource.status,

@@ -53,6 +53,7 @@ export const uploadSyllabus = async (req: Request, res: Response) => {
         files.map(async (file) => {
           const initialDataSource = await db.dataSource.create({
             data: {
+              fileType: '',
               type: DataSourceType.TEXT,
               source: `${file.originalname}|session:${sessionId}`,
               content: null,
@@ -88,6 +89,7 @@ export const uploadSyllabus = async (req: Request, res: Response) => {
       // Create initial record with PROCESSING status
       const dataSource = await db.dataSource.create({
         data: {
+          fileType: '',
           type: DataSourceType.TEXT,
           source: `${file.originalname}|session:${sessionId}`,
           content: null,
@@ -129,6 +131,7 @@ export const uploadSyllabus = async (req: Request, res: Response) => {
       // Create data source directly with COMPLETED status
       const dataSource = await db.dataSource.create({
         data: {
+          fileType: '',
           type,
           source: sessionId ? `${source}|session:${sessionId}` : source,
           content: content || null,
