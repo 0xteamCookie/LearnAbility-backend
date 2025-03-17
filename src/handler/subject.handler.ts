@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import db from '../db/db';
-
+import { deleteEmbeddingsBySubject } from '../services/milvus';
 /**
  * @desc Get all subjects for a user
  * @route GET /api/v1/pyos/subjects
@@ -9,8 +9,7 @@ import db from '../db/db';
 export const getAllSubjects = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    
-    // Changed to query by userId directly instead of through dataSources
+
     const subjects = await db.subject.findMany({
       where: {
         userId,
@@ -22,7 +21,7 @@ export const getAllSubjects = async (req: Request, res: Response) => {
       },
       orderBy: { createdAt: 'desc' },
     });
-    
+
     return void res.json({
       success: true,
       subjects: subjects.map((subject) => ({
@@ -49,22 +48,22 @@ export const createSubject = async (req: Request, res: Response) => {
   try {
     const { name, color } = req.body;
     const userId = (req as any).userId;
-    
+
     if (!name) {
       return void res.status(400).json({
         success: false,
         message: 'Subject name is required',
       });
     }
-    
+
     const newSubject = await db.subject.create({
       data: {
         name,
         color: color || 'bg-blue-500',
-        userId, // Add userId to associate subject with user
+        userId,
       },
     });
-    
+
     return void res.status(201).json({
       success: true,
       subject: newSubject,
@@ -84,26 +83,27 @@ export const deleteSubject = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = (req as any).userId;
-    
-    // Check if subject belongs to user before deleting
+
     const subject = await db.subject.findFirst({
       where: {
         id,
         userId,
       },
     });
-    
+
     if (!subject) {
       return void res.status(404).json({
         success: false,
         message: 'Subject not found or not owned by user',
       });
     }
-    
+
+    await deleteEmbeddingsBySubject(id);
+
     await db.subject.delete({
       where: { id },
     });
-    
+
     return void res.json({
       success: true,
       message: 'Subject deleted successfully',
