@@ -16,7 +16,7 @@ router.delete('/subjects/:id', subjectHandler.deleteSubject);
 
 router.get('/subjects/:subjectId/topics', topicHandler.getSubjectTopics);
 router.post('/subjects/:subjectId/topics', topicHandler.createTopic);
-router.delete('/topics/:id', topicHandler.deleteTopic);
+router.delete('/subjects/:idx/topics/:id', topicHandler.deleteTopic);
 
 router.get('/tags', tagHandler.getAllTags);
 router.post('/tags', tagHandler.createTag);
