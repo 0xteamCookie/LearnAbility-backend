@@ -8,7 +8,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', sourceHandler.getAllDataSources);
-router.post('/', upload.array('file', 5), sourceHandler.createDataSource);
+router.post('/', upload.array('documents', 5), sourceHandler.createDataSource);
 router.get('/:id', sourceHandler.getDataSourceById);
 router.delete('/:id', sourceHandler.deleteDataSource);
 

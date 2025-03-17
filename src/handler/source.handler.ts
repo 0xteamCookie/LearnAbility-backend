@@ -355,6 +355,7 @@ export const getAllDataSources = async (req: Request, res: Response) => {
         id: dataSource.id,
         name: dataSource.name,
         type: dataSource.type,
+        fileType: dataSource.fileType,
         size: dataSource.size,
         uploadDate: dataSource.uploadDate,
         subjectId: dataSource.subjectId,
