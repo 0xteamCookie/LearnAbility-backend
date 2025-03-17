@@ -3,12 +3,13 @@ import db from '../db/db';
 import { DataSourceStatus, DataSourceType } from '@prisma/client';
 import { extractTextFromDocument } from '../services/gemini.service';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { insertEmbeddings } from '../services/milvus';
+import { insertEmbeddings, deleteEmbeddingsByDataSource } from '../services/milvus';
 import path from 'path';
 
 /**
  * Process a file asynchronously and update the existing record
  */
+
 const processFileAsync = async (
   file: Express.Multer.File,
   dataSourceId: string,
@@ -17,6 +18,11 @@ const processFileAsync = async (
 ): Promise<void> => {
   try {
     const filePath = file.path;
+
+    const dataSource = await db.dataSource.findUnique({
+      where: { id: dataSourceId },
+      select: { subjectId: true, topicId: true },
+    });
 
     const extractedText = await extractTextFromDocument(filePath);
     const textSplitter = new RecursiveCharacterTextSplitter({
@@ -29,8 +35,13 @@ const processFileAsync = async (
       pageContent: chunk.pageContent,
       metadata: { chunk_id: index },
     }));
+
     console.log(output);
-    await insertEmbeddings(output, userId);
+    await insertEmbeddings(output, userId, {
+      subjectId: dataSource?.subjectId || undefined,
+      topicId: dataSource?.topicId || undefined,
+      dataSourceId,
+    });
 
     await db.dataSource.update({
       where: { id: dataSourceId },
@@ -98,8 +109,6 @@ export const createDataSource = async (req: Request, res: Response) => {
       if (['.pdf'].includes(ext)) return DataSourceType.PDF;
       if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) return DataSourceType.IMAGE;
       if (['.doc', '.docx', '.txt', '.rtf'].includes(ext)) return DataSourceType.DOCS;
-      // if (['.mp4', '.avi', '.mov', '.wmv'].includes(ext)) return DataSourceType.VIDEO;
-      // if (['.mp3', '.wav', '.ogg'].includes(ext)) return DataSourceType.AUDIO;
 
       return DataSourceType.TEXT;
     };
@@ -141,7 +150,7 @@ export const createDataSource = async (req: Request, res: Response) => {
             let tag = await db.tag.findFirst({
               where: {
                 name: tagName.toLowerCase().trim(),
-                userId, // Only check for existing tags for this user
+                userId,
               },
             });
 
@@ -149,7 +158,7 @@ export const createDataSource = async (req: Request, res: Response) => {
               tag = await db.tag.create({
                 data: {
                   name: tagName.toLowerCase().trim(),
-                  userId, // Associate tag with user
+                  userId,
                 },
               });
             }
@@ -206,7 +215,7 @@ export const createDataSource = async (req: Request, res: Response) => {
           let tag = await db.tag.findFirst({
             where: {
               name: tagName.toLowerCase().trim(),
-              userId, // Only check for existing tags for this user
+              userId,
             },
           });
 
@@ -214,7 +223,7 @@ export const createDataSource = async (req: Request, res: Response) => {
             tag = await db.tag.create({
               data: {
                 name: tagName.toLowerCase().trim(),
-                userId, // Associate tag with user
+                userId,
               },
             });
           }
@@ -267,7 +276,7 @@ export const createDataSource = async (req: Request, res: Response) => {
           let tag = await db.tag.findFirst({
             where: {
               name: tagName.toLowerCase().trim(),
-              userId, // Only check for existing tags for this user
+              userId,
             },
           });
 
@@ -275,7 +284,7 @@ export const createDataSource = async (req: Request, res: Response) => {
             tag = await db.tag.create({
               data: {
                 name: tagName.toLowerCase().trim(),
-                userId, // Associate tag with user
+                userId,
               },
             });
           }
@@ -454,6 +463,8 @@ export const deleteDataSource = async (req: Request, res: Response) => {
     await db.dataSourceTag.deleteMany({
       where: { dataSourceId: id },
     });
+
+    await deleteEmbeddingsByDataSource(id);
 
     await db.dataSource.delete({
       where: { id },
