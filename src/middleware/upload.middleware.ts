@@ -9,39 +9,53 @@ if (!fs.existsSync(uploadsDir)) {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadsDir);
+    const subjectId = req.params.subjectId;
+    let uploadPath = uploadsDir;
+
+    if (subjectId) {
+      const subjectDir = path.join(uploadsDir, subjectId);
+      if (!fs.existsSync(subjectDir)) {
+        fs.mkdirSync(subjectDir, { recursive: true });
+      }
+      uploadPath = subjectDir;
+    }
+
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    cb(null, uniqueSuffix + '-' + file.originalname);
   },
 });
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const supportedTypes = [
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'application/pdf',
-    'image/tiff',
-  ];
-
-  if (supportedTypes.includes(file.mimetype)) {
-    cb(null, true);
+  if (req.path.includes('/syllabus') && file.fieldname === 'syllabus') {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed for syllabuses'));
+    }
   } else {
-    cb(
-      new Error(
-        `Unsupported file type: ${file.mimetype}. Supported types: ${supportedTypes.join(', ')}`
-      )
-    );
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Unsupported file type'));
+    }
   }
 };
 
 export const upload = multer({
-  storage,
-  fileFilter,
+  storage: storage,
+  fileFilter: fileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024,
   },

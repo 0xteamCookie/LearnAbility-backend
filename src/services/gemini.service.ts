@@ -3,8 +3,8 @@ import fs from 'fs/promises';
 import mime from 'mime-types';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
-const LOCATION = 'europe-west4';
-const MODEL_NAME = 'gemini-2.0-flash-lite-001';
+const LOCATION = 'us-central1';
+const MODEL_NAME = 'gemini-2.0-pro-exp-02-05';
 
 let vertexAI: VertexAI;
 let generativeModel: any;
@@ -44,9 +44,7 @@ export const extractTextFromDocument = async (filePath: string): Promise<string>
 
     const filePart = await fileToGenerativePart(filePath);
 
-    const instructionText = `You are a document parser. Your task is to read the provided document and output all parsed content in plain text.
-Ensure that any formulas in the document are accurately formatted. Additionally, structure the output to be AI data-ready,
-as it will be ingested into a vector database. Provide efficient and comprehensive data.`;
+    const instructionText = `Your task is to read the data from the given file, extract all the informations and write it in a structured format, if there any images`;
 
     const promptParts = [{ text: instructionText }, filePart, { text: 'output' }];
 
@@ -104,11 +102,11 @@ export async function getEmbeddings(texts: string) {
   const project = PROJECT_ID;
   const model = 'text-embedding-005';
   const task = 'QUESTION_ANSWERING';
-  const dimensionality = 0; // 768
+  const dimensionality = 0;
   const apiEndpoint = 'europe-west4-aiplatform.googleapis.com';
   const aiplatform = require('@google-cloud/aiplatform');
   const { PredictionServiceClient } = aiplatform.v1;
-  const { helpers } = aiplatform; // helps construct protobuf.Value objects.
+  const { helpers } = aiplatform;
   const clientOptions = { apiEndpoint: apiEndpoint };
   const location = 'us-central1';
   const endpoint = `projects/${project}/locations/${location}/publishers/google/models/${model}`;
@@ -128,3 +126,90 @@ export async function getEmbeddings(texts: string) {
   });
   return embeddings[0];
 }
+
+/**
+ * Generate lesson content based on syllabus text
+ * @param syllabusText Extracted text from a syllabus PDF
+ * @param subjectId The ID of the subject
+ * @param subjectName The name of the subject
+ * @returns Array of lesson objects
+ */
+export const generateLessonContent = async (
+  syllabusText: string,
+  subjectId: string,
+  subjectName: string
+): Promise<any> => {
+  try {
+    if (!generativeModel) {
+      throw new Error('Gemini model not initialized');
+    }
+
+    const systemPrompt = `
+    You are a helpful AI tutor designed to assist students in learning effectively.
+    Based on the provided syllabus text (extracted from a PDF), generate a list of 4-8 high-quality educational lessons.
+    
+    Your response must be a valid JSON array of lessons following EXACTLY this format:
+    [
+      {
+        "id": "subject-shortened-title",
+        "title": "Lesson Title",
+        "description": "Brief description of the lesson content",
+        "subjectId": "${subjectId}",
+        "duration": "XX min",
+        "level": "Beginner|Intermediate|Advanced",
+        "order": 1,
+        "progress": 0,
+        "image": "/placeholder.svg?height=200&width=400",
+        "prerequisites": []
+      }
+    ]
+    
+    For the first lesson, prerequisites should be an empty array.
+    For subsequent lessons, prerequisites should include the IDs of lessons that should be completed first.
+    The subject ID is provided to you and should be used as-is.
+    Ensure lesson IDs are unique, descriptive, and kebab-cased (e.g., "math-linear-equations").
+    Lesson order should be sequential and logical for learning progression.
+    Lesson progress should be set to 0 for all lessons.
+    Do not include any text or explanation outside the JSON format.
+    `;
+
+    const promptParts = [
+      { text: systemPrompt },
+      { text: `Subject Name: ${subjectName}\nSyllabus Content: ${syllabusText}` },
+    ];
+
+    const result = await generativeModel.generateContent({
+      contents: [{ role: 'user', parts: promptParts }],
+      generationConfig: {
+        maxOutputTokens: 8192,
+        temperature: 0.7,
+        topP: 0.95,
+      },
+    });
+
+    const response = result.response;
+
+    if (!response || !response.candidates || response.candidates.length === 0) {
+      throw new Error('No response candidates returned');
+    }
+
+    const responseText = response.candidates[0].content.parts[0].text;
+
+    let jsonStart = responseText.indexOf('[');
+    let jsonEnd = responseText.lastIndexOf(']') + 1;
+
+    if (jsonStart === -1 || jsonEnd === 0) {
+      throw new Error('Invalid JSON response format');
+    }
+
+    const jsonStr = responseText.substring(jsonStart, jsonEnd);
+    const lessons = JSON.parse(jsonStr);
+
+    return lessons;
+  } catch (error) {
+    console.error('Error generating lessons with Gemini:', error);
+    throw new Error(
+      `Failed to generate lessons: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+};

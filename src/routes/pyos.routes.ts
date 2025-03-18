@@ -13,6 +13,9 @@ router.use(authenticate);
 router.get('/subjects', subjectHandler.getAllSubjects);
 router.post('/subjects', subjectHandler.createSubject);
 router.delete('/subjects/:id', subjectHandler.deleteSubject);
+router.post('/subjects/syllabus', upload.single('document'), subjectHandler.uploadSyllabus);
+router.get('/subjects/:subjectId/syllabus', subjectHandler.getSyllabus);
+router.get('/subjects/:subjectId/lessons', subjectHandler.generateLessons);
 
 router.get('/subjects/:subjectId/topics', topicHandler.getSubjectTopics);
 router.post('/subjects/:subjectId/topics', topicHandler.createTopic);
@@ -22,10 +25,9 @@ router.get('/tags', tagHandler.getAllTags);
 router.post('/tags', tagHandler.createTag);
 router.delete('/tags/:id', tagHandler.deleteTag);
 
-// Material routes using DataSource handler (Not that necessary)
 router.get('/materials', sourceHandler.getAllDataSources);
 router.get('/materials/:id', sourceHandler.getDataSourceById);
 router.delete('/materials/:id', sourceHandler.deleteDataSource);
-router.post('/materials', upload.array('file', 5), sourceHandler.createDataSource);
+router.post('/materials', upload.array('documents', 10), sourceHandler.createDataSource);
 
 export { router as pyosRoutes };
