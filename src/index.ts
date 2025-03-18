@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { authRoutes } from './routes/auth.routes';
 import { dataSourceRoutes } from './routes/source.routes';
 import { queryRoutes } from './routes/query.routes';
@@ -11,9 +12,15 @@ import { pyosRoutes } from './routes/pyos.routes';
 dotenv.config();
 
 const app = express();
+app.use(cookieParser());
 
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: 'http://localhost:3001',
+    credentials: true, // allow sending cookies
+  })
+);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/data-sources', dataSourceRoutes);
