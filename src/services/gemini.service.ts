@@ -3,8 +3,8 @@ import fs from 'fs/promises';
 import mime from 'mime-types';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
-const LOCATION = 'europe-west4';
-const MODEL_NAME = 'gemini-2.0-flash-lite-001';
+const LOCATION = 'us-central1';
+const MODEL_NAME = 'gemini-2.0-pro-exp-02-05';
 
 let vertexAI: VertexAI;
 let generativeModel: any;
@@ -44,9 +44,7 @@ export const extractTextFromDocument = async (filePath: string): Promise<string>
 
     const filePart = await fileToGenerativePart(filePath);
 
-    const instructionText = `You are a document parser. Your task is to read the provided document and output all parsed content in plain text.
-Ensure that any formulas in the document are accurately formatted. Additionally, structure the output to be AI data-ready,
-as it will be ingested into a vector database. Provide efficient and comprehensive data.`;
+    const instructionText = `Your task is to read the data from the given file, extract all the informations and write it in a structured format, if there any images`;
 
     const promptParts = [{ text: instructionText }, filePart, { text: 'output' }];
 

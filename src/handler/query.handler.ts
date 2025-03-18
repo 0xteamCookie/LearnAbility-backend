@@ -4,8 +4,8 @@ import { searchMilvus } from '../services/milvus';
 import db from '../db/db';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
-const LOCATION = 'europe-west4';
-const MODEL_NAME = 'gemini-2.0-flash-lite-001';
+const LOCATION = 'us-central1';
+const MODEL_NAME = 'gemini-2.0-pro-exp-02-05';
 
 let vertexAI: VertexAI;
 let generativeModel: any;
