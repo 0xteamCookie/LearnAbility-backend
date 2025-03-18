@@ -52,6 +52,13 @@ export const login = async (req: Request, res: Response) => {
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     return void res.json({ success: true, token });
   } catch (error) {
     console.error(error);
@@ -87,4 +94,14 @@ export const getProfile = async (req: Request, res: Response) => {
     console.error(error);
     return void res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
+};
+
+export const logout = (req: Request, res: Response) => {
+  res.clearCookie('authToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  });
+
+  return void res.json({ success: true, message: 'Logged out successfully' });
 };
