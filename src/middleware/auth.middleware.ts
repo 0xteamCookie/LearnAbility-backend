@@ -9,7 +9,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
   //   token = req.cookies?.authToken;
   // }
 
-  const token = req.cookies?.authToken;
+  const token = req.cookies?.authToken || req.headers?.authorization?.split(' ')[1];
   if (!token) {
     return void res.status(401).json({ success: false, message: 'Unauthorized' });
   }
