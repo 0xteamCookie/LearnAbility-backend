@@ -15,7 +15,7 @@ model User {
   createdAt       DateTime      @default(now())
   syllabusContent String?
   standard        String
-  interests       String
+  interests       String[]
 
   dataSources DataSource[]
   aiChats     AIChat[]
