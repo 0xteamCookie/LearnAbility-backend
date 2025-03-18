@@ -89,7 +89,6 @@ export const getSyllabus = async (req: Request, res: Response) => {
 export const getSubject = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    console.log(id);
 
     const subject = await db.subject.findUnique({
       where: {
