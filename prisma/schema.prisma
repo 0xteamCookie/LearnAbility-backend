@@ -84,6 +84,7 @@ model Subject {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   materialCount Int          @default(0)
+  syllabusPath      String?      // Add syllabus field
 
   // Add user relation
   userId        String
