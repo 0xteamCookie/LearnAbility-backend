@@ -87,42 +87,6 @@ export const getSyllabus = async (req: Request, res: Response) => {
 };
 
 /**
- * @desc Generate lessons for a subject based on its syllabus PDF
- * @route GET /api/v1/pyos/subjects/:subjectId/lessons
- * @protected
- */
-export const generateLessons = async (req: Request, res: Response) => {
-  try {
-    const { subjectId } = req.params;
-    const userId = (req as any).userId;
-
-    const subject = await db.subject.findFirst({
-      where: { id: subjectId, userId },
-      select: { syllabusPath: true, name: true, id: true },
-    });
-
-    if (!subject || !subject.syllabusPath) {
-      return void res.status(404).json({
-        success: false,
-        message: 'Subject or syllabus not found',
-      });
-    }
-
-    const syllabusText = await extractTextFromPDF(subject.syllabusPath);
-
-    const lessons = await generateLessonContent(syllabusText, subject.id, subject.name);
-
-    return void res.json({
-      success: true,
-      lessons,
-    });
-  } catch (error) {
-    console.error(error);
-    return void res.status(500).json({ success: false, message: 'Internal Server Error' });
-  }
-};
-
-/**
  * @desc Get all subjects for a user
  * @route GET /api/v1/pyos/subjects
  * @protected
@@ -228,6 +192,86 @@ export const deleteSubject = async (req: Request, res: Response) => {
     return void res.json({
       success: true,
       message: 'Subject deleted successfully',
+    });
+  } catch (error) {
+    console.error(error);
+    return void res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
+/**
+ * @desc Generate lessons for a subject based on its syllabus PDF
+ * @route GET /api/v1/pyos/subjects/:subjectId/lessons
+ * @protected
+ */
+export const generateLessons = async (req: Request, res: Response) => {
+  try {
+    const { subjectId } = req.params;
+    const { reset } = req.query;
+    const userId = (req as any).userId;
+
+    const subject = await db.subject.findFirst({
+      where: { id: subjectId, userId },
+      select: { syllabusPath: true, name: true, id: true },
+    });
+
+    if (!subject || !subject.syllabusPath) {
+      return void res.status(404).json({
+        success: false,
+        message: 'Subject or syllabus not found',
+      });
+    }
+
+    const existingLessons = await db.dataSource.findFirst({
+      where: {
+        subjectId: subject.id,
+        userId,
+        name: 'Generated Lessons',
+        type: 'TEXT',
+      },
+    });
+
+    if (existingLessons && existingLessons.content && reset !== 'true') {
+      try {
+        const lessons = JSON.parse(existingLessons.content);
+        return void res.json({
+          success: true,
+          lessons,
+          isNew: false,
+        });
+      } catch (err) {
+        console.error('Error parsing stored lessons:', err);
+      }
+    }
+
+    const lessons = await generateLessonContent(subject.syllabusPath, subject.id, subject.name);
+
+    if (existingLessons) {
+      await db.dataSource.update({
+        where: { id: existingLessons.id },
+        data: { content: JSON.stringify(lessons) },
+      });
+    } else {
+      await db.dataSource.create({
+        data: {
+          name: 'Generated Lessons',
+          type: 'TEXT',
+          fileType: 'json',
+          size: 0,
+          subjectId: subject.id,
+          description: `Auto-generated lessons for ${subject.name}`,
+          content: JSON.stringify(lessons),
+          source: 'SYSTEM',
+          status: 'COMPLETED',
+          userId,
+        },
+      });
+    }
+
+    return void res.json({
+      success: true,
+      lessons,
+      isNew: true,
     });
   } catch (error) {
     console.error(error);

@@ -128,14 +128,14 @@ export async function getEmbeddings(texts: string) {
 }
 
 /**
- * Generate lesson content based on syllabus text
- * @param syllabusText Extracted text from a syllabus PDF
+ * Generate lesson content based on syllabus PDF
+ * @param syllabusPath Path to the syllabus PDF file
  * @param subjectId The ID of the subject
  * @param subjectName The name of the subject
  * @returns Array of lesson objects
  */
 export const generateLessonContent = async (
-  syllabusText: string,
+  syllabusPath: string,
   subjectId: string,
   subjectName: string
 ): Promise<any> => {
@@ -144,9 +144,11 @@ export const generateLessonContent = async (
       throw new Error('Gemini model not initialized');
     }
 
+    const filePart = await fileToGenerativePart(syllabusPath);
+
     const systemPrompt = `
     You are a helpful AI tutor designed to assist students in learning effectively.
-    Based on the provided syllabus text (extracted from a PDF), generate a list of 4-8 high-quality educational lessons.
+    Based on the provided syllabus PDF, generate a list of 4-8 high-quality educational lessons.
     
     Your response must be a valid JSON array of lessons following EXACTLY this format:
     [
@@ -175,7 +177,8 @@ export const generateLessonContent = async (
 
     const promptParts = [
       { text: systemPrompt },
-      { text: `Subject Name: ${subjectName}\nSyllabus Content: ${syllabusText}` },
+      { text: `Subject Name: ${subjectName}` },
+      filePart,
     ];
 
     const result = await generativeModel.generateContent({
