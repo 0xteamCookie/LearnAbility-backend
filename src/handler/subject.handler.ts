@@ -86,6 +86,26 @@ export const getSyllabus = async (req: Request, res: Response) => {
   }
 };
 
+export const getSubject = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const subject = await db.subject.findUnique({
+      where: {
+        id: id,
+      },
+    });
+
+    return void res.json({
+      success: true,
+      subject,
+    });
+  } catch (error) {
+    console.error(error);
+    return void res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
 /**
  * @desc Get all subjects for a user
  * @route GET /api/v1/pyos/subjects

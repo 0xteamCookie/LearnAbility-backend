@@ -12,6 +12,7 @@ router.use(authenticate);
 
 router.get('/subjects', subjectHandler.getAllSubjects);
 router.post('/subjects', subjectHandler.createSubject);
+router.get('/subjects/:id', subjectHandler.getSubject);
 router.delete('/subjects/:id', subjectHandler.deleteSubject);
 router.post('/subjects/syllabus', upload.single('document'), subjectHandler.uploadSyllabus);
 router.get('/subjects/:subjectId/syllabus', subjectHandler.getSyllabus);
