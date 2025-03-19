@@ -133,6 +133,7 @@ export const getAllSubjects = async (req: Request, res: Response) => {
         id: subject.id,
         name: subject.name,
         color: subject.color,
+        status: subject.status,
         createdAt: subject.createdAt,
         updatedAt: subject.updatedAt,
         materialCount: subject._count.dataSources,
@@ -164,6 +165,7 @@ export const createSubject = async (req: Request, res: Response) => {
     const newSubject = await db.subject.create({
       data: {
         name,
+        status: 'PROCESSING',
         color: color || 'bg-blue-500',
         userId,
       },
@@ -287,7 +289,12 @@ export const generateLessons = async (req: Request, res: Response) => {
         },
       });
     }
-
+    await db.subject.update({
+      where: { id: subjectId },
+      data: {
+        status: 'COMPLETED',
+      },
+    });
     return void res.json({
       success: true,
       lessons,
