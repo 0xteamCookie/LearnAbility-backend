@@ -18,12 +18,13 @@ model User {
   interests       String[]
 
   dataSources DataSource[]
+  lessons     Lesson[]
   aiChats     AIChat[]
   reminders   Reminder[]
   contents    AIContent[]
-  subjects    Subject[]      // For relation
-  topics      Topic[]        // For relation
-  tags        Tag[]          // For relation
+  subjects    Subject[]      
+  topics      Topic[]        
+  tags        Tag[]          
 }
 
 model DataSource {
@@ -33,27 +34,30 @@ model DataSource {
   fileType     String
   size         Int              @default(0)
   uploadDate   DateTime         @default(now())
-  source       String           // URL or filename
-  sourceUrl    String?          // External source URL
+  source       String           
+  sourceUrl    String?          
   status       DataSourceStatus
-  progress     Int?             // Processing percentage
-  content      String?          // Extracted content for RAG
-  url          String?          // Path to file
+  progress     Int?             
+  content      String?          
+  url          String?          
   
-  // Subject relation
+  
   subjectId    String?
   subject      Subject?         @relation(fields: [subjectId], references: [id])
+
+  lessonId     String?
+  lesson       Lesson?     @relation(fields: [lessonId], references: [id])
   
-  // Topic relation
+  
   topicId      String?
   topic        Topic?           @relation(fields: [topicId], references: [id])
   
-  // Other fields
+  
   description  String?
   thumbnail    String?
-  tags         DataSourceTag[]  // Changed to relation
+  tags         DataSourceTag[]  
   
-  // User relation
+  
   userId       String
   user         User             @relation(fields: [userId], references: [id])
   createdAt    DateTime         @default(now())
@@ -85,13 +89,14 @@ model Subject {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   materialCount Int          @default(0)
-  syllabusPath      String?      // Add syllabus field
+  syllabusPath      String?      
 
-  // Add user relation
+  
   userId        String
   user          User         @relation(fields: [userId], references: [id])
 
   topics       Topic[]
+  lessons     Lesson[]
   dataSources  DataSource[]
 }
 
@@ -103,7 +108,7 @@ model Topic {
   updatedAt     DateTime     @updatedAt
   materialCount Int          @default(0)
 
-  // Add user relation
+  
   userId        String
   user          User         @relation(fields: [userId], references: [id])
 
@@ -116,7 +121,7 @@ model Tag {
   name          String         @unique
   materialCount Int            @default(0)
 
-  // Add user relation
+  
   userId        String
   user          User           @relation(fields: [userId], references: [id])
 
@@ -160,4 +165,33 @@ model Reminder {
   user        User     @relation(fields: [userId], references: [id])
   userId      String
   createdAt   DateTime @default(now())
+}
+
+model Lesson {
+  id          String       @id @default(uuid())
+  title       String
+  description String
+  duration    String       @default("30 min")
+  level       String       @default("Beginner")
+  order       Int          @default(1)
+  progress    Int          @default(0)
+  image       String?
+  
+  
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  subjectId   String
+  
+  
+  user        User         @relation(fields: [userId], references: [id])
+  userId      String
+  
+  
+  prerequisites   Lesson[] @relation("LessonPrerequisites")
+  prerequisiteFor Lesson[] @relation("LessonPrerequisites")
+  
+  
+  dataSources  DataSource[]
+  
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }

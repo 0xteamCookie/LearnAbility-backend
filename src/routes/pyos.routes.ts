@@ -17,6 +17,7 @@ router.delete('/subjects/:id', subjectHandler.deleteSubject);
 router.post('/subjects/syllabus', upload.single('document'), subjectHandler.uploadSyllabus);
 router.get('/subjects/:subjectId/syllabus', subjectHandler.getSyllabus);
 router.get('/subjects/:subjectId/lessons', subjectHandler.generateLessons);
+router.get('/:subjectId/:lessonId', subjectHandler.generateLessonsC);
 
 router.get('/subjects/:subjectId/topics', topicHandler.getSubjectTopics);
 router.post('/subjects/:subjectId/topics', topicHandler.createTopic);

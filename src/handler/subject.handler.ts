@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import db from '../db/db';
 import { deleteEmbeddingsBySubject } from '../services/milvus';
-import { generateLessonContent, extractTextFromPDF } from '../services/gemini.service';
+import { generateLessonContent, generateLessonContentSpecific } from '../services/gemini.service';
 import fs from 'fs/promises';
 /**
  * @desc Upload syllabus PDF for a subject
@@ -253,51 +253,226 @@ export const generateLessons = async (req: Request, res: Response) => {
       },
     });
 
+    let isNew = true;
+    let lessons = [];
+
     if (existingLessons && existingLessons.content && reset !== 'true') {
       try {
-        const lessons = JSON.parse(existingLessons.content);
-        return void res.json({
-          success: true,
-          lessons,
-          isNew: false,
-        });
+        lessons = JSON.parse(existingLessons.content);
+        isNew = false;
       } catch (err) {
         console.error('Error parsing stored lessons:', err);
+        isNew = true;
       }
     }
 
-    const lessons = await generateLessonContent(subject.syllabusPath, subject.id, subject.name);
+    if (isNew || reset === 'true') {
+      lessons = await generateLessonContent(subject.syllabusPath, subject.id, subject.name);
 
-    if (existingLessons) {
+      if (existingLessons) {
+        await db.dataSource.update({
+          where: { id: existingLessons.id },
+          data: { content: JSON.stringify(lessons) },
+        });
+      } else {
+        await db.dataSource.create({
+          data: {
+            name: 'Generated Lessons',
+            type: 'TEXT',
+            fileType: 'json',
+            size: 0,
+            subjectId: subject.id,
+            description: `Auto-generated lessons for ${subject.name}`,
+            content: JSON.stringify(lessons),
+            source: 'SYSTEM',
+            status: 'COMPLETED',
+            userId,
+          },
+        });
+      }
+    }
+
+    if (lessons && lessons.length > 0) {
+      const existingLessonRecords = await db.lesson.findMany({
+        where: { subjectId: subject.id, userId },
+        select: { id: true, title: true },
+      });
+
+      const existingLessonMap = new Map();
+      existingLessonRecords.forEach((lesson) => {
+        existingLessonMap.set(lesson.title, lesson.id);
+      });
+
+      const lessonIdMap = new Map();
+
+      for (const lesson of lessons) {
+        const existingId = existingLessonMap.get(lesson.title);
+
+        if (existingId) {
+          const updatedLesson = await db.lesson.update({
+            where: { id: existingId },
+            data: {
+              title: lesson.title,
+              description: lesson.description,
+              duration: lesson.duration || '30 min',
+              level: lesson.level || 'Beginner',
+              order: lesson.order || 1,
+              image: lesson.image,
+            },
+          });
+          lessonIdMap.set(lesson.id, updatedLesson.id);
+        } else {
+          const newLesson = await db.lesson.create({
+            data: {
+              title: lesson.title,
+              description: lesson.description,
+              duration: lesson.duration || '30 min',
+              level: lesson.level || 'Beginner',
+              order: lesson.order || 1,
+              image: lesson.image,
+              subjectId: subject.id,
+              userId,
+            },
+          });
+          lessonIdMap.set(lesson.id, newLesson.id);
+        }
+      }
+
+      for (const lesson of lessons) {
+        if (lesson.prerequisites && lesson.prerequisites.length > 0) {
+          const dbLessonId = lessonIdMap.get(lesson.id);
+
+          if (dbLessonId) {
+            const prerequisiteIds = lesson.prerequisites
+              .map((prereqId: string | number) => lessonIdMap.get(prereqId))
+              .filter((id: string | undefined): id is string => !!id);
+
+            if (prerequisiteIds.length > 0) {
+              await db.lesson.update({
+                where: { id: dbLessonId },
+                data: {
+                  prerequisites: {
+                    connect: prerequisiteIds.map((id: string) => ({ id })),
+                  },
+                },
+              });
+            }
+          }
+        }
+      }
+
+      const dbLessons = await db.lesson.findMany({
+        where: { subjectId: subject.id, userId },
+        include: {
+          prerequisites: {
+            select: { id: true, title: true },
+          },
+        },
+        orderBy: { order: 'asc' },
+      });
+
+      await db.subject.update({
+        where: { id: subjectId },
+        data: {
+          status: 'COMPLETED',
+        },
+      });
+
+      return void res.json({
+        success: true,
+        lessons: dbLessons,
+        rawLessons: lessons,
+        isNew,
+      });
+    }
+
+    return void res.status(500).json({
+      success: false,
+      message: 'Failed to process lessons',
+    });
+  } catch (error) {
+    console.error(error);
+    return void res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
+/**
+ * @desc Generate detailed content for a lesson
+ * @route GET /api/v1/pyos/subjects/:subjectId/:lessonId
+ * @protected
+ */
+export const generateLessonsC = async (req: Request, res: Response) => {
+  try {
+    const { lessonId } = req.params;
+    const { reset } = req.query;
+    const userId = (req as any).userId;
+
+    const lesson = await db.lesson.findFirst({
+      where: { id: lessonId },
+      select: { id: true, title: true, description: true, subjectId: true },
+    });
+
+    if (!lesson) {
+      return void res.status(404).json({
+        success: false,
+        message: 'Lesson not found',
+      });
+    }
+
+    const existingContent = await db.dataSource.findFirst({
+      where: {
+        lessonId: lessonId,
+        userId,
+        name: 'Generated Lesson Content',
+        type: 'TEXT',
+      },
+    });
+
+    if (existingContent && existingContent.content && reset !== 'true') {
+      try {
+        const content = JSON.parse(existingContent.content);
+        return void res.json({
+          success: true,
+          content,
+          isNew: false,
+        });
+      } catch (err) {
+        console.error('Error parsing stored lesson content:', err);
+      }
+    }
+
+    const detailedContent = await generateLessonContentSpecific(
+      lesson.id,
+      lesson.title,
+      lesson.description
+    );
+
+    if (existingContent) {
       await db.dataSource.update({
-        where: { id: existingLessons.id },
-        data: { content: JSON.stringify(lessons) },
+        where: { id: existingContent.id },
+        data: { content: JSON.stringify(detailedContent) },
       });
     } else {
       await db.dataSource.create({
         data: {
-          name: 'Generated Lessons',
+          name: 'Generated Lesson Content',
           type: 'TEXT',
           fileType: 'json',
           size: 0,
-          subjectId: subject.id,
-          description: `Auto-generated lessons for ${subject.name}`,
-          content: JSON.stringify(lessons),
+          lessonId: lesson.id,
+          subjectId: lesson.subjectId,
+          description: `Auto-generated detailed content for ${lesson.title}`,
+          content: JSON.stringify(detailedContent),
           source: 'SYSTEM',
           status: 'COMPLETED',
           userId,
         },
       });
     }
-    await db.subject.update({
-      where: { id: subjectId },
-      data: {
-        status: 'COMPLETED',
-      },
-    });
+
     return void res.json({
       success: true,
-      lessons,
+      content: detailedContent,
       isNew: true,
     });
   } catch (error) {

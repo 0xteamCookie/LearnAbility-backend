@@ -128,6 +128,115 @@ export async function getEmbeddings(texts: string) {
 }
 
 /**
+ * Generate detailed content for a lesson using Gemini
+ * @param lessonId The ID of the lesson
+ * @param title The title of the lesson
+ * @param description The description of the lesson
+ * @returns LessonContent object with detailed pages and blocks
+ */
+export const generateLessonContentSpecific = async (
+  lessonId: string,
+  title: string,
+  description: string
+): Promise<any> => {
+  try {
+    if (!generativeModel) {
+      throw new Error('Gemini model not initialized');
+    }
+
+    const systemPrompt = `
+    You are an expert educational content creator specializing in creating detailed, engaging lesson content.
+    Generate a complete lesson content structure based on the title and description provided.
+    
+    The response must be a valid JSON object following EXACTLY this structure:
+    {
+      "id": "${lessonId}",
+      "title": "${title}",
+      "description": "${description}",
+      "totalEstimatedTime": "XX min",
+      "learningObjectives": ["objective 1", "objective 2", ...],
+      "pages": [
+        {
+          "id": "${lessonId}-page-1",
+          "title": "Page Title",
+          "order": 1,
+          "estimatedTime": "X min",
+          "blocks": [
+            {
+              "id": "unique-block-id",
+              "type": "heading|text|list|code|equation|callout|quiz|exercise|checkpoint|table|definition",
+              "order": 1,
+              // Additional properties based on block type
+            },
+            // More blocks...
+          ]
+        },
+        // More pages...
+      ]
+    }
+
+    Create 3-5 pages with 5-10 blocks each, covering the topic comprehensively.
+    Use a variety of block types for engaging content:
+    - heading: {level: 1-4, content: "heading text"}
+    - text: {content: "paragraph text", emphasis: "none|light|strong"}
+    - list: {items: ["item1", "item2"], style: "bullet|numbered|check"}
+    - code: {content: "code snippet", language: "appropriate language", showLineNumbers: true/false}
+    - equation: {content: "LaTeX equation", displayMode: true/false}
+    - callout: {content: "callout text", variant: "info|warning|success|error", title: "optional title"}
+    - quiz: {title: "quiz title", questions: [{id: "q1", question: "question text", options: ["opt1", "opt2", "opt3", "opt4"], correctAnswer: index, explanation: "why"}]}
+    - exercise: {instructions: "what to do", startingCode: "optional", solution: "optional", hints: ["hint1", "hint2"]}
+    - checkpoint: {title: "checkpoint title", description: "description", requiredToAdvance: true/false}
+    - table: {headers: ["col1", "col2"], rows: [["data1", "data2"], ["data3", "data4"]], caption: "optional caption"}
+    - definition: {term: "term to define", definition: "definition text", examples: ["example1", "example2"]}
+
+    Ensure all IDs are unique and descriptive.
+    Ensure proper content flow and learning progression across pages.
+    Include at least one quiz and one exercise in the lesson.
+    Do not include any text or explanation outside the JSON format.
+    `;
+
+    const result = await generativeModel.generateContent({
+      contents: [{ 
+        role: 'user', 
+        parts: [{ 
+          text: systemPrompt
+        }] 
+      }],
+      generationConfig: {
+        maxOutputTokens: 8192,
+        temperature: 0.7,
+        topP: 0.95,
+      },
+    });
+
+    const response = result.response;
+
+    if (!response || !response.candidates || response.candidates.length === 0) {
+      throw new Error('No response candidates returned');
+    }
+
+    const responseText = response.candidates[0].content.parts[0].text;
+
+    let jsonStart = responseText.indexOf('{');
+    let jsonEnd = responseText.lastIndexOf('}') + 1;
+
+    if (jsonStart === -1 || jsonEnd === 0) {
+      throw new Error('Invalid JSON response format');
+    }
+
+    const jsonStr = responseText.substring(jsonStart, jsonEnd);
+    const lessonContent = JSON.parse(jsonStr);
+
+    return lessonContent;
+  } catch (error) {
+    console.error('Error generating lesson content with Gemini:', error);
+    throw new Error(
+      `Failed to generate lesson content: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+};
+
+/**
  * Generate lesson content based on syllabus PDF
  * @param syllabusPath Path to the syllabus PDF file
  * @param subjectId The ID of the subject
