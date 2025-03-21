@@ -8,59 +8,68 @@ datasource db {
 }
 
 model User {
-  id              String        @id @default(uuid())
-  email           String        @unique
+  id              String   @id @default(uuid())
+  email           String   @unique
   password        String
   name            String
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime @default(now())
   syllabusContent String?
   standard        String
   interests       String[]
+
+  stats           UserStats?
 
   dataSources DataSource[]
   lessons     Lesson[]
   aiChats     AIChat[]
   reminders   Reminder[]
   contents    AIContent[]
-  subjects    Subject[]      
-  topics      Topic[]        
-  tags        Tag[]          
+  subjects    Subject[]
+  topics      Topic[]
+  tags        Tag[]
+}
+
+model UserStats {
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  studyStreak      Int       @default(0) // Continuous study days
+  completedLessons Int       @default(0) // Total lessons completed
+  weeklyProgress   Int       @default(0) // % progress in a week
+  quizAverage      Float? // Average quiz score
+  lastStudiedAt    DateTime? // Track last activity
+  user             User      @relation(fields: [userId], references: [id])
 }
 
 model DataSource {
-  id           String           @id @default(uuid())
-  name         String
-  type         DataSourceType
-  fileType     String
-  size         Int              @default(0)
-  uploadDate   DateTime         @default(now())
-  source       String           
-  sourceUrl    String?          
-  status       DataSourceStatus
-  progress     Int?             
-  content      String?          
-  url          String?          
-  
-  
-  subjectId    String?
-  subject      Subject?         @relation(fields: [subjectId], references: [id])
+  id         String           @id @default(uuid())
+  name       String
+  type       DataSourceType
+  fileType   String
+  size       Int              @default(0)
+  uploadDate DateTime         @default(now())
+  source     String
+  sourceUrl  String?
+  status     DataSourceStatus
+  progress   Int?
+  content    String?
+  url        String?
 
-  lessonId     String?
-  lesson       Lesson?     @relation(fields: [lessonId], references: [id])
-  
-  
-  topicId      String?
-  topic        Topic?           @relation(fields: [topicId], references: [id])
-  
-  
-  description  String?
-  thumbnail    String?
-  tags         DataSourceTag[]  
-  
-  
-  userId       String
-  user         User             @relation(fields: [userId], references: [id])
-  createdAt    DateTime         @default(now())
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id])
+
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id])
+
+  topicId String?
+  topic   Topic?  @relation(fields: [topicId], references: [id])
+
+  description String?
+  thumbnail   String?
+  tags        DataSourceTag[]
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 enum DataSourceStatus {
@@ -82,58 +91,55 @@ enum DataSourceType {
 }
 
 model Subject {
-  id            String       @id @default(uuid())
+  id            String           @id @default(uuid())
   name          String
-  color         String       @default("bg-blue-500")
- status         DataSourceStatus 
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  materialCount Int          @default(0)
-  syllabusPath      String?      
+  color         String           @default("bg-blue-500")
+  status        DataSourceStatus
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  materialCount Int              @default(0)
+  syllabusPath  String?
 
-  
-  userId        String
-  user          User         @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  topics       Topic[]
+  topics      Topic[]
   lessons     Lesson[]
-  dataSources  DataSource[]
+  dataSources DataSource[]
 }
 
 model Topic {
-  id            String       @id @default(uuid())
+  id            String   @id @default(uuid())
   name          String
   subjectId     String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  materialCount Int          @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  materialCount Int      @default(0)
 
-  
-  userId        String
-  user          User         @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  subject      Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  dataSources  DataSource[]
+  subject     Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  dataSources DataSource[]
 }
 
 model Tag {
-  id            String         @id @default(uuid())
-  name          String         @unique
-  materialCount Int            @default(0)
+  id            String @id @default(uuid())
+  name          String @unique
+  materialCount Int    @default(0)
 
-  
-  userId        String
-  user          User           @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  dataSources  DataSourceTag[]
+  dataSources DataSourceTag[]
 }
 
 model DataSourceTag {
   dataSourceId String
   tagId        String
 
-  dataSource  DataSource @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
-  tag         Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  dataSource DataSource @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+  tag        Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([dataSourceId, tagId])
 }
@@ -168,30 +174,26 @@ model Reminder {
 }
 
 model Lesson {
-  id          String       @id @default(uuid())
+  id          String  @id @default(uuid())
   title       String
   description String
-  duration    String       @default("30 min")
-  level       String       @default("Beginner")
-  order       Int          @default(1)
-  progress    Int          @default(0)
+  duration    String  @default("30 min")
+  level       String  @default("Beginner")
+  order       Int     @default(1)
+  progress    Int     @default(0)
   image       String?
-  
-  
-  subject     Subject      @relation(fields: [subjectId], references: [id])
-  subjectId   String
-  
-  
-  user        User         @relation(fields: [userId], references: [id])
-  userId      String
-  
-  
+
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  subjectId String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
   prerequisites   Lesson[] @relation("LessonPrerequisites")
   prerequisiteFor Lesson[] @relation("LessonPrerequisites")
-  
-  
-  dataSources  DataSource[]
-  
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+
+  dataSources DataSource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
