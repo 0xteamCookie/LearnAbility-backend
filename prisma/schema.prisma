@@ -27,16 +27,17 @@ model User {
   subjects    Subject[]
   topics      Topic[]
   tags        Tag[]
+  quizzes      Quiz[]
 }
 
 model UserStats {
   id               String    @id @default(uuid())
   userId           String    @unique
-  studyStreak      Int       @default(0) // Continuous study days
-  completedLessons Int       @default(0) // Total lessons completed
-  weeklyProgress   Int       @default(0) // % progress in a week
-  quizAverage      Float? // Average quiz score
-  lastStudiedAt    DateTime? // Track last activity
+  studyStreak      Int       @default(0) 
+  completedLessons Int       @default(0) 
+  weeklyProgress   Int       @default(0) 
+  quizAverage      Float? 
+  lastStudiedAt    DateTime? 
   user             User      @relation(fields: [userId], references: [id])
 }
 
@@ -106,6 +107,7 @@ model Subject {
   topics      Topic[]
   lessons     Lesson[]
   dataSources DataSource[]
+  quizzes      Quiz[]
 }
 
 model Topic {
@@ -121,6 +123,7 @@ model Topic {
 
   subject     Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   dataSources DataSource[]
+  quizzes      Quiz[]
 }
 
 model Tag {
@@ -193,7 +196,42 @@ model Lesson {
   prerequisiteFor Lesson[] @relation("LessonPrerequisites")
 
   dataSources DataSource[]
+  quizzes      Quiz[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Quiz {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  difficulty   String   @default("Medium") 
+  
+  
+  questions    Json     
+  
+  
+  questionCount Int     @default(0)
+  timeLimit    Int?     
+  passingScore Int      @default(70)  
+  
+  
+  subjectId    String?
+  subject      Subject? @relation(fields: [subjectId], references: [id])
+  
+  topicId      String?
+  topic        Topic?   @relation(fields: [topicId], references: [id])
+  
+  lessonId     String?
+  lesson       Lesson?  @relation(fields: [lessonId], references: [id])
+  
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  
+  
+  attempts     Json?    
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

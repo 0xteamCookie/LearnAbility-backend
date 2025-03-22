@@ -8,6 +8,7 @@ import { queryRoutes } from './routes/query.routes';
 import { feedRoutes } from './routes/feed.routes';
 import { pyosRoutes } from './routes/pyos.routes';
 import { webhookRoutes } from './webhook/navigation';
+import { quizRoutes } from './routes/quiz.routes';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/v1/user-query', queryRoutes);
 app.use('/api/v1/feed', feedRoutes);
 app.use('/api/v1/pyos', pyosRoutes);
 app.use('/webhook', webhookRoutes);
+app.use('/api/v1/quizzes', quizRoutes);
 
 const PORT = process.env.PORT || 30000;
 
