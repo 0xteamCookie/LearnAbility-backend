@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { authRoutes } from './routes/auth.routes';
+import { statsRoutes } from './routes/stats.routes';
 import { dataSourceRoutes } from './routes/source.routes';
 import { queryRoutes } from './routes/query.routes';
 import { feedRoutes } from './routes/feed.routes';
@@ -23,6 +24,7 @@ app.use(
   })
 );
 
+app.use('/api/v1', statsRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/data-sources', dataSourceRoutes);
 app.use('/api/v1/user-query', queryRoutes);

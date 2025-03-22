@@ -4,6 +4,6 @@ import { getStats } from '../handler/stats.handler';
 
 const router = Router();
 
-router.get('/stats:id', authenticate, getStats);
+router.get('/stats', authenticate, getStats);
 
-export { router as authRoutes };
+export { router as statsRoutes };
