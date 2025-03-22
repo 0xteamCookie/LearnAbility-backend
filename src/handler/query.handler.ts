@@ -25,7 +25,7 @@ try {
 export const answerUserQuery = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const { query, subjectId, topicId } = req.body;
+    const { query, subjectId } = req.body;
 
     if (!query || typeof query !== 'string') {
       return void res.status(400).json({
@@ -44,7 +44,6 @@ export const answerUserQuery = async (req: Request, res: Response) => {
     const searchOptions: {
       topK?: number;
       subjectId?: string;
-      topicId?: string;
       dataSourceIds?: string[];
     } = {
       topK: 3,
@@ -56,19 +55,13 @@ export const answerUserQuery = async (req: Request, res: Response) => {
         console.log(`Searching for data sources in subject: ${subjectId}`);
         const whereClause: any = { userId, subjectId };
 
-        if (topicId) {
-          console.log(`Filtering by topic: ${topicId}`);
-          whereClause.topicId = topicId;
-          searchOptions.topicId = topicId;
-        }
-
         const dataSources = await db.dataSource.findMany({
           where: whereClause,
           select: { id: true },
         });
 
         dataSourceIds = dataSources.map((ds) => ds.id);
-        console.log(`Found ${dataSourceIds.length} data sources in this subject/topic`);
+        console.log(`Found ${dataSourceIds.length} data sources in this subject`);
 
         if (dataSourceIds.length > 0) {
           searchOptions.dataSourceIds = dataSourceIds;
@@ -85,13 +78,10 @@ export const answerUserQuery = async (req: Request, res: Response) => {
       if (contextChunks.length === 0) {
         return void res.status(200).json({
           success: true,
-          answer: `I couldn't find any relevant information related to your question in the materials for this ${
-            topicId ? 'topic' : 'subject'
-          }. Would you like to add more materials on this topic?`,
+          answer: `I couldn't find any relevant information related to your question in the materials for this subject. Would you like to add more materials on this topic?`,
           query,
           relevanceScore: 0,
           subjectId: subjectId || null,
-          topicId: topicId || null,
         });
       }
 
@@ -140,7 +130,6 @@ export const answerUserQuery = async (req: Request, res: Response) => {
         query,
         relevanceScore: contextChunks.length > 0 ? contextChunks[0].score : 0,
         subjectId: subjectId || null,
-        topicId: topicId || null,
       });
     } catch (searchError) {
       console.error('Error during search:', searchError);
@@ -151,7 +140,6 @@ export const answerUserQuery = async (req: Request, res: Response) => {
         query,
         relevanceScore: 0,
         subjectId: subjectId || null,
-        topicId: topicId || null,
       });
     }
   } catch (error) {

@@ -175,7 +175,7 @@ export const generateLessonContentSpecific = async (
       ]
     }
 
-    Create 3-5 pages with 5-10 blocks each, covering the topic comprehensively.
+    Create 3-5 pages with 5-10 blocks each, covering the lesson comprehensively.
     Use a variety of block types for engaging content:
     - heading: {level: 1-4, content: "heading text"}
     - text: {content: "paragraph text", emphasis: "none|light|strong"}

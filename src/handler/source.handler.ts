@@ -21,7 +21,7 @@ const processFileAsync = async (
 
     const dataSource = await db.dataSource.findUnique({
       where: { id: dataSourceId },
-      select: { subjectId: true, topicId: true },
+      select: { subjectId: true},
     });
 
     const extractedText = await extractTextFromDocument(filePath);
@@ -39,7 +39,6 @@ const processFileAsync = async (
     console.log(output);
     await insertEmbeddings(output, userId, {
       subjectId: dataSource?.subjectId || undefined,
-      topicId: dataSource?.topicId || undefined,
       dataSourceId,
     });
 
@@ -75,7 +74,6 @@ export const createDataSource = async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const {
       subjectId,
-      topicId,
       description,
       tags,
       source = 'upload',
@@ -89,16 +87,6 @@ export const createDataSource = async (req: Request, res: Response) => {
         return void res.status(404).json({
           success: false,
           message: 'Subject not found',
-        });
-      }
-    }
-
-    if (topicId) {
-      const topic = await db.topic.findUnique({ where: { id: topicId } });
-      if (!topic) {
-        return void res.status(404).json({
-          success: false,
-          message: 'Topic not found',
         });
       }
     }
@@ -132,7 +120,6 @@ export const createDataSource = async (req: Request, res: Response) => {
             fileType,
             size,
             subjectId: subjectId || null,
-            topicId: topicId || null,
             description,
             thumbnail,
             url,
@@ -197,7 +184,6 @@ export const createDataSource = async (req: Request, res: Response) => {
           fileType,
           size,
           subjectId: subjectId || null,
-          topicId: topicId || null,
           description,
           thumbnail,
           url,
@@ -258,7 +244,6 @@ export const createDataSource = async (req: Request, res: Response) => {
           fileType: '',
           size: 0,
           subjectId: subjectId || null,
-          topicId: topicId || null,
           description,
           thumbnail: null,
           url: null,
@@ -323,12 +308,11 @@ export const createDataSource = async (req: Request, res: Response) => {
 export const getAllDataSources = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const { subjectId, topicId, tags, type, status } = req.query;
+    const { subjectId, tags, type, status } = req.query;
 
     const whereClause: any = { userId };
 
     if (subjectId) whereClause.subjectId = subjectId as string;
-    if (topicId) whereClause.topicId = topicId as string;
     if (type) whereClause.type = type as string;
     if (status) whereClause.status = status as string;
 
@@ -348,7 +332,6 @@ export const getAllDataSources = async (req: Request, res: Response) => {
       where: whereClause,
       include: {
         subject: true,
-        topic: true,
         tags: {
           include: {
             tag: true,
@@ -370,8 +353,6 @@ export const getAllDataSources = async (req: Request, res: Response) => {
         subjectId: dataSource.subjectId,
         subjectName: dataSource.subject?.name,
         subjectColor: dataSource.subject?.color,
-        topicId: dataSource.topicId,
-        topicName: dataSource.topic?.name,
         description: dataSource.description,
         tags: dataSource.tags.map((dt) => dt.tag.name),
         thumbnail: dataSource.thumbnail,
@@ -407,7 +388,6 @@ export const getDataSourceById = async (req: Request, res: Response) => {
       },
       include: {
         subject: true,
-        topic: true,
         tags: {
           include: {
             tag: true,

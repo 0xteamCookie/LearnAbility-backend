@@ -25,7 +25,6 @@ model User {
   reminders   Reminder[]
   contents    AIContent[]
   subjects    Subject[]
-  topics      Topic[]
   tags        Tag[]
   quizzes      Quiz[]
 }
@@ -60,9 +59,6 @@ model DataSource {
 
   lessonId String?
   lesson   Lesson? @relation(fields: [lessonId], references: [id])
-
-  topicId String?
-  topic   Topic?  @relation(fields: [topicId], references: [id])
 
   description String?
   thumbnail   String?
@@ -103,25 +99,7 @@ model Subject {
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
-
-  topics      Topic[]
   lessons     Lesson[]
-  dataSources DataSource[]
-  quizzes      Quiz[]
-}
-
-model Topic {
-  id            String   @id @default(uuid())
-  name          String
-  subjectId     String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  materialCount Int      @default(0)
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  subject     Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   dataSources DataSource[]
   quizzes      Quiz[]
 }
@@ -219,9 +197,6 @@ model Quiz {
   
   subjectId    String?
   subject      Subject? @relation(fields: [subjectId], references: [id])
-  
-  topicId      String?
-  topic        Topic?   @relation(fields: [topicId], references: [id])
   
   lessonId     String?
   lesson       Lesson?  @relation(fields: [lessonId], references: [id])

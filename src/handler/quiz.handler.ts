@@ -10,12 +10,11 @@ import { generateQuiz, saveQuiz, recordQuizAttempt } from '../services/quiz.serv
 export const getAllQuizzes = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const { subjectId, topicId, lessonId } = req.query;
+    const { subjectId, lessonId } = req.query;
 
     const whereClause: any = { userId };
 
     if (subjectId) whereClause.subjectId = subjectId as string;
-    if (topicId) whereClause.topicId = topicId as string;
     if (lessonId) whereClause.lessonId = lessonId as string;
 
     const quizzes = await db.quiz.findMany({
@@ -23,9 +22,6 @@ export const getAllQuizzes = async (req: Request, res: Response) => {
       include: {
         subject: {
           select: { name: true, color: true },
-        },
-        topic: {
-          select: { name: true },
         },
         lesson: {
           select: { title: true },
@@ -44,7 +40,6 @@ export const getAllQuizzes = async (req: Request, res: Response) => {
         questionCount: quiz.questionCount,
         subjectName: quiz.subject?.name,
         subjectColor: quiz.subject?.color,
-        topicName: quiz.topic?.name,
         lessonTitle: quiz.lesson?.title,
         timeLimit: quiz.timeLimit,
         passingScore: quiz.passingScore,
@@ -81,9 +76,6 @@ export const getQuizById = async (req: Request, res: Response) => {
       include: {
         subject: {
           select: { name: true, color: true },
-        },
-        topic: {
-          select: { name: true },
         },
         lesson: {
           select: { title: true },
@@ -126,7 +118,6 @@ export const generateQuizHandler = async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const {
       subjectId,
-      topicId,
       lessonId,
       difficulty,
       questionCount,
@@ -157,7 +148,6 @@ export const generateQuizHandler = async (req: Request, res: Response) => {
     }
 
     const quizData = await generateQuiz(subjectId, {
-      topicId,
       lessonId,
       difficulty,
       questionCount,
@@ -166,7 +156,7 @@ export const generateQuizHandler = async (req: Request, res: Response) => {
     });
 
     if (saveToDb) {
-      const savedQuiz = await saveQuiz(quizData, userId, subjectId, topicId, lessonId);
+      const savedQuiz = await saveQuiz(quizData, userId, subjectId, lessonId);
       return void res.json({
         success: true,
         quiz: savedQuiz,
@@ -204,7 +194,6 @@ export const createQuiz = async (req: Request, res: Response) => {
       timeLimit,
       passingScore,
       subjectId,
-      topicId,
       lessonId,
       questions,
     } = req.body;
@@ -235,7 +224,6 @@ export const createQuiz = async (req: Request, res: Response) => {
         attempts: [],
         userId,
         subjectId,
-        topicId: topicId || null,
         lessonId: lessonId || null,
       },
     });

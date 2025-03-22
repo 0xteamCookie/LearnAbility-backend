@@ -22,7 +22,6 @@ export async function insertEmbeddings(
   userId: string,
   metadata: {
     subjectId?: string;
-    topicId?: string;
     dataSourceId: string;
   }
 ) {
@@ -34,7 +33,6 @@ export async function insertEmbeddings(
       const enhancedMetadata = {
         ...doc.metadata,
         subjectId: metadata.subjectId || null,
-        topicId: metadata.topicId || null,
         dataSourceId: metadata.dataSourceId,
       };
 
@@ -47,13 +45,12 @@ export async function insertEmbeddings(
             metadata: enhancedMetadata,
             user_id: userId,
             subject_id: metadata.subjectId || '',
-            topic_id: metadata.topicId || '',
             data_source_id: metadata.dataSourceId,
           },
         ],
       });
 
-      console.log('Inserted chunk with subject and topic metadata');
+      console.log('Inserted chunk with subject metadata');
     }
   } catch (error) {
     console.error('Error inserting embeddings:', error);
@@ -66,7 +63,6 @@ export async function searchMilvus(
   options: {
     topK?: number;
     subjectId?: string;
-    topicId?: string;
     dataSourceIds?: string[];
   } = {}
 ) {
@@ -84,7 +80,7 @@ export async function searchMilvus(
       return [];
     }
 
-    const { topK = 2, subjectId, topicId, dataSourceIds } = options;
+    const { topK = 2, subjectId, dataSourceIds } = options;
 
     console.log('Getting query embeddings...');
     const queryEmbedding = await getEmbeddings(queryText);
@@ -100,7 +96,6 @@ export async function searchMilvus(
       filter += ` && (${dataSourceFilter})`;
     } else {
       if (subjectId) filter += ` && subject_id == "${subjectId}"`;
-      if (topicId) filter += ` && topic_id == "${topicId}"`;
     }
 
     console.log(`Using filter: ${filter}`);
@@ -119,7 +114,7 @@ export async function searchMilvus(
         if (dataSourceIds && dataSourceIds.length > 0) {
           if (subjectId) {
             console.log('Falling back to subject-based search');
-            return await searchMilvus(queryText, userId, { topK, subjectId, topicId });
+            return await searchMilvus(queryText, userId, { topK, subjectId });
           }
         }
         return [];
@@ -164,21 +159,6 @@ export async function searchMilvus(
   } catch (error) {
     console.error('Error in searchMilvus:', error);
     return [];
-  }
-}
-
-export async function deleteEmbeddingsByTopic(topicId: string) {
-  try {
-    await client.loadCollection({ collection_name: COLLECTION_NAME });
-
-    await client.deleteEntities({
-      collection_name: COLLECTION_NAME,
-      filter: `topic_id == "${topicId}"`,
-    });
-
-    console.log(`Deleted embeddings for topic: ${topicId}`);
-  } catch (error) {
-    console.error('Error deleting embeddings by topic:', error);
   }
 }
 
@@ -273,7 +253,6 @@ async function createCollection() {
         },
         { name: 'user_id', data_type: DataType.VarChar, max_length: 50 },
         { name: 'subject_id', data_type: DataType.VarChar, max_length: 50 },
-        { name: 'topic_id', data_type: DataType.VarChar, max_length: 50 },
         { name: 'data_source_id', data_type: DataType.VarChar, max_length: 50 },
         {
           name: 'metadata',

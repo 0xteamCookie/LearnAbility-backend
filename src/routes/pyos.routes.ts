@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { upload } from '../middleware/upload.middleware';
 import * as subjectHandler from '../handler/subject.handler';
-import * as topicHandler from '../handler/topic.handler';
 import * as tagHandler from '../handler/tag.handler';
 import * as sourceHandler from '../handler/source.handler';
 
@@ -18,10 +17,6 @@ router.post('/subjects/syllabus', upload.single('document'), subjectHandler.uplo
 router.get('/subjects/:subjectId/syllabus', subjectHandler.getSyllabus);
 router.get('/subjects/:subjectId/lessons', subjectHandler.generateLessons);
 router.get('/:subjectId/:lessonId', subjectHandler.generateLessonsC);
-
-router.get('/subjects/:subjectId/topics', topicHandler.getSubjectTopics);
-router.post('/subjects/:subjectId/topics', topicHandler.createTopic);
-router.delete('/subjects/:idx/topics/:id', topicHandler.deleteTopic);
 
 router.get('/tags', tagHandler.getAllTags);
 router.post('/tags', tagHandler.createTag);

@@ -16,12 +16,11 @@ try {
 }
 
 /**
- * Generate a quiz based on a subject and optional topic
+ * Generate a quiz based on a subject
  */
 export const generateQuiz = async (
   subjectId: string,
   options: {
-    topicId?: string;
     lessonId?: string;
     difficulty?: string;
     questionCount?: number;
@@ -53,13 +52,6 @@ export const generateQuiz = async (
       throw new Error('Subject not found');
     }
 
-    let topic = null;
-    if (options.topicId) {
-      topic = await db.topic.findUnique({
-        where: { id: options.topicId },
-      });
-    }
-
     let lesson = null;
     if (options.lessonId) {
       lesson = await db.lesson.findUnique({
@@ -78,7 +70,7 @@ export const generateQuiz = async (
 
     const systemPrompt = `
     You are an expert educational content creator specializing in creating high-quality quiz questions.
-    Based on the provided subject ${subject.name}${topic ? ` and topic ${topic.name}` : ''}${
+    Based on the provided subject ${subject.name}${
       lesson ? ` and lesson ${lesson.title}` : ''
     }, 
     generate a quiz with ${options.questionCount || 10} questions.
@@ -185,7 +177,6 @@ export const saveQuiz = async (
   quizData: any,
   userId: string,
   subjectId: string,
-  topicId?: string,
   lessonId?: string
 ): Promise<any> => {
   try {
@@ -201,7 +192,6 @@ export const saveQuiz = async (
         attempts: [],
         userId,
         subjectId,
-        topicId: topicId || null,
         lessonId: lessonId || null,
       },
     });
