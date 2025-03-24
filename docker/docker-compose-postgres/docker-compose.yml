@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres_container
+    environment:
+      # Set your custom user, password, and database name here
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Secur_eASSPASSYouKnowFuck
+      POSTGRES_DB: learnability
+    ports:
+      # Map container port 5432 to host port 5432 so that you can access PostgreSQL locally
+      - "5432:5432"
+    volumes:
+      # Persist PostgreSQL data on your host
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
