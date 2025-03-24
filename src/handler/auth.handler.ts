@@ -59,7 +59,7 @@ export const login = async (req: Request, res: Response) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return void res.json({ success: true, token });
+    return void res.json({ success: true, token, user });
   } catch (error) {
     console.error(error);
     return void res.status(500).json({ success: false, message: 'Internal Server Error' });
