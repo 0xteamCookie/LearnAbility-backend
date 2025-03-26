@@ -1,5 +1,6 @@
 import { VertexAI } from '@google-cloud/vertexai';
 import db from '../db/db';
+import { updateQuizAverage } from './stats.service';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
 const LOCATION = 'us-central1';
@@ -70,9 +71,7 @@ export const generateQuiz = async (
 
     const systemPrompt = `
     You are an expert educational content creator specializing in creating high-quality quiz questions.
-    Based on the provided subject ${subject.name}${
-      lesson ? ` and lesson ${lesson.title}` : ''
-    }, 
+    Based on the provided subject ${subject.name}${lesson ? ` and lesson ${lesson.title}` : ''}, 
     generate a quiz with ${options.questionCount || 10} questions.
     
     The quiz should be at ${options.difficulty || 'Medium'} difficulty level.
@@ -307,6 +306,7 @@ export const recordQuizAttempt = async (
             lastStudiedAt: new Date(),
           },
         });
+        await updateQuizAverage(userId, attempt.percentage);
       }
     } catch (error) {
       console.error('Error updating user stats:', error);
