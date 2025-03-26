@@ -22,7 +22,7 @@ export const updateStudyStreak = async (userId: string): Promise<void> => {
       const daysSinceLastStudy = differenceInDays(now, lastStudied);
 
       if (daysSinceLastStudy === 0) {
-        // Already recorded today
+        // Already studied today, no change to streak
         return;
       } else if (daysSinceLastStudy === 1) {
         // Consecutive day, increment streak
@@ -63,7 +63,7 @@ export const incrementCompletedLessons = async (userId: string): Promise<void> =
     // Also update study streak when completing a lesson
     await updateStudyStreak(userId);
     // Also update weekly progress
-    await updateWeeklyProgress(userId, 10); // Increment by fixed amount
+    await updateWeeklyProgress(userId, 10); // Increment by fixed amount for completing a lesson
   } catch (error) {
     console.error('Error incrementing completed lessons:', error);
   }
@@ -120,7 +120,7 @@ export const updateQuizAverage = async (userId: string, newQuizScore: number): P
   try {
     const userStats = await getOrCreateUserStats(userId);
 
-    const currentAverage = userStats.quizAverage || 0;
+    // Get count of completed quizzes (those with attempts)
     const completedQuizzes = await db.quiz.count({
       where: {
         userId,
@@ -129,10 +129,12 @@ export const updateQuizAverage = async (userId: string, newQuizScore: number): P
     });
 
     // Calculate new average
-    const newAverage =
-      currentAverage === 0
-        ? newQuizScore
-        : (currentAverage * (completedQuizzes - 1) + newQuizScore) / completedQuizzes;
+    let newAverage = newQuizScore;
+    
+    if (userStats.quizAverage) {
+      // If there's an existing average, use a weighted calculation
+      newAverage = ((userStats.quizAverage * (completedQuizzes - 1)) + newQuizScore) / completedQuizzes;
+    }
 
     await db.userStats.update({
       where: { userId },

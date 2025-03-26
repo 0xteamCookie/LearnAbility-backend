@@ -289,6 +289,8 @@ export const recordQuizAttempt = async (
       },
     });
 
+    await updateQuizAverage(userId, attempt.percentage);
+
     try {
       const userStats = await db.userStats.findUnique({
         where: { userId },
@@ -306,7 +308,6 @@ export const recordQuizAttempt = async (
             lastStudiedAt: new Date(),
           },
         });
-        await updateQuizAverage(userId, attempt.percentage);
       }
     } catch (error) {
       console.error('Error updating user stats:', error);
