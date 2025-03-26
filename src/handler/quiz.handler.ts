@@ -57,11 +57,6 @@ export const getAllQuizzes = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * @desc Get a specific quiz by ID
- * @route GET /api/v1/quizzes/:id
- * @protected
- */
 export const getQuizById = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
@@ -90,13 +85,26 @@ export const getQuizById = async (req: Request, res: Response) => {
       });
     }
 
-    if (includeAttempts !== 'true' && quiz.attempts) {
-      quiz.attempts = [];
+    const attempts = quiz.attempts ? (quiz.attempts as any[]) : [];
+    const hasAttempted = attempts.length > 0;
+    const lastAttempt = hasAttempted ? attempts[attempts.length - 1] : null;
+
+    // Add attempt status details
+    const quizWithMeta = {
+      ...quiz,
+      hasAttempted,
+      lastAttempt: includeAttempts === 'true' ? lastAttempt : null,
+      bestScore: hasAttempted ? Math.max(...attempts.map((a) => a.percentage)) : 0,
+      attemptsCount: attempts.length,
+    };
+
+    if (includeAttempts !== 'true') {
+      quizWithMeta.attempts = [];
     }
 
     return void res.json({
       success: true,
-      quiz,
+      quiz: quizWithMeta,
     });
   } catch (error) {
     console.error(error);
@@ -313,6 +321,48 @@ export const submitQuizAttempt = async (req: Request, res: Response) => {
     return void res.json({
       success: true,
       attempt,
+    });
+  } catch (error) {
+    console.error(error);
+    return void res.status(500).json({
+      success: false,
+      message: 'Internal Server Error',
+      error: (error as Error).message,
+    });
+  }
+};
+
+/**
+ * @desc Get all attempts for a quiz
+ * @route GET /api/v1/quizzes/:id/attempts
+ * @protected
+ */
+export const getQuizAttempts = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { id: quizId } = req.params;
+
+    const quiz = await db.quiz.findFirst({
+      where: {
+        id: quizId,
+        userId,
+      },
+    });
+
+    if (!quiz) {
+      return void res.status(404).json({
+        success: false,
+        message: 'Quiz not found',
+      });
+    }
+
+    const attempts = quiz.attempts ? (quiz.attempts as any[]) : [];
+
+    return void res.json({
+      success: true,
+      attempts,
+      hasAttempted: attempts.length > 0,
+      lastAttempt: attempts.length > 0 ? attempts[attempts.length - 1] : null,
     });
   } catch (error) {
     console.error(error);

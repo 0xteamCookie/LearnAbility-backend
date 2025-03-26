@@ -29,6 +29,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  console.log(file);
   if (req.path.includes('/syllabus') && file.fieldname === 'syllabus') {
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
@@ -42,6 +43,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
       'image/png',
       'text/plain',
       'application/msword',
+      'application/octet-stream',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
 
