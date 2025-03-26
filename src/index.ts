@@ -11,6 +11,7 @@ import { pyosRoutes } from './routes/pyos.routes';
 import { webhookRoutes } from './webhook/navigation';
 import { quizRoutes } from './routes/quiz.routes';
 import { analyticsRoutes } from './routes/analytics.routes';
+import placeholderHandler from './handler/placeholder.handler';
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ app.use(
   })
 );
 
-app.use('/api/v1', statsRoutes);
+app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/data-sources', dataSourceRoutes);
 app.use('/api/v1/user-query', queryRoutes);
@@ -34,6 +35,8 @@ app.use('/api/v1/pyos', pyosRoutes);
 app.use('/webhook', webhookRoutes);
 app.use('/api/v1/quizzes', quizRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.get('/placeholder.svg', placeholderHandler.getSVG);
+
 const PORT = process.env.PORT || 30000;
 
 app.listen(PORT, () => {

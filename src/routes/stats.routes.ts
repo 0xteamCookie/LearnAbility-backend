@@ -1,9 +1,11 @@
-import { Router } from 'express';
+import express from 'express';
+import { getStats, markLessonCompleted, trackStudyActivity } from '../handler/stats.handler';
 import { authenticate } from '../middleware/auth.middleware';
-import { getStats } from '../handler/stats.handler';
 
-const router = Router();
+const router = express.Router();
 
-router.get('/stats', authenticate, getStats);
+router.get('/', authenticate, getStats);
+router.post('/lesson/:lessonId/complete', authenticate, markLessonCompleted);
+router.post('/track', authenticate, trackStudyActivity);
 
 export { router as statsRoutes };
