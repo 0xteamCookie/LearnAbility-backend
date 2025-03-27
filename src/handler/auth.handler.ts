@@ -73,11 +73,46 @@ export const login = async (req: Request, res: Response) => {
  */
 export const getProfile = async (req: Request, res: Response) => {
   try {
-    const user = await db.user.findUnique({ where: { id: (req as any).userId } });
+    const userId = (req as any).userId;
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      include: {
+        stats: true,
+      },
+    });
 
     if (!user) {
       return void res.status(404).json({ success: false, message: 'User not found' });
     }
+
+    const now = new Date();
+    let updatedStreak = user.stats?.studyStreak || 0;
+    let lastStudiedAt = user.stats?.lastStudiedAt;
+
+    if (lastStudiedAt) {
+      const lastDate = new Date(lastStudiedAt);
+      const differenceInDays = Math.floor(
+        (now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (differenceInDays === 1) {
+        // user logged in the next day, increase streak
+        updatedStreak += 1;
+      } else if (differenceInDays > 1) {
+        // user missed a day, reset streak
+        updatedStreak = 1;
+      }
+    } else {
+      // first time logging in, set streak to 1
+      updatedStreak = 1;
+    }
+
+    await db.userStats.upsert({
+      where: { userId },
+      update: { studyStreak: updatedStreak, lastStudiedAt: now },
+      create: { userId, studyStreak: 1, lastStudiedAt: now },
+    });
 
     return void res.json({
       success: true,
@@ -88,6 +123,9 @@ export const getProfile = async (req: Request, res: Response) => {
         interests: user.interests,
         standard: user.standard,
         syllabusContent: user.syllabusContent,
+        stats: {
+          studyStreak: updatedStreak,
+        },
       },
     });
   } catch (error) {
