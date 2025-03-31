@@ -62,6 +62,16 @@ Learnability Backend API is a robust backend application designed to power an en
 
 ---
 
+## 🌱 SDG Alignment: Goal 4 - Quality Education
+
+Learnability aims to contribute to the UN Sustainable Development Goal 4: "Ensure inclusive and equitable quality education and promote lifelong learning opportunities for all." We address this through several key features:
+
+-   **Target 4.3 (Equal Access to Tertiary Education):** By leveraging AI (Google Gemini) to automatically generate lesson content and quizzes from syllabi or uploaded materials, Learnability helps reduce the effort and potential cost barriers associated with creating high-quality educational resources, making learning more accessible.
+-   **Target 4.4 (Relevant Skills for Employment):** The platform's focus on personalized learning paths (via the feed) and progress tracking allows users to focus on acquiring skills relevant to their goals more effectively. AI-generated quizzes provide immediate feedback, reinforcing learning.
+-   **Target 4.7 (Knowledge for Sustainable Development):** The semantic search capability powered by Milvus enables learners to quickly find contextually relevant information within their study materials, fostering deeper understanding and knowledge acquisition necessary for informed participation in society. The platform facilitates self-directed, lifelong learning by making diverse educational materials manageable and searchable.
+
+---
+
 ## API Documentation
 
 ### Endpoints Overview
