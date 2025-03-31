@@ -37,8 +37,10 @@ async function fileToGenerativePart(filePath: string) {
  * @returns Extracted text content
  */
 export const extractTextFromDocument = async (filePath: string): Promise<string> => {
+  console.log(`[GeminiService] Extracting text from document: ${filePath}`);
   try {
     if (!generativeModel) {
+      console.error('[GeminiService] Gemini model not initialized during text extraction.');
       throw new Error('Gemini model not initialized');
     }
 
@@ -71,13 +73,14 @@ export const extractTextFromDocument = async (filePath: string): Promise<string>
     }
 
     if (!extractedText) {
-      console.warn('No text was extracted from the response candidate.');
+      console.warn(`[GeminiService] No text was extracted from the response candidate for file: ${filePath}`);
     }
+    console.log(`[GeminiService] Successfully extracted text from document: ${filePath}`);
     return extractedText;
   } catch (error) {
-    console.error('Error processing document with Gemini:', error);
+    console.error(`[GeminiService] Error processing document ${filePath} with Gemini:`, error);
     throw new Error(
-      `Failed to extract text from document: ${
+      `[GeminiService] Failed to extract text from document: ${
         error instanceof Error ? error.message : String(error)
       }`
     );
@@ -88,6 +91,7 @@ export const extractTextFromDocument = async (filePath: string): Promise<string>
  * Process an image file (convenience method that calls extractTextFromDocument)
  */
 export const extractTextFromImage = async (filePath: string): Promise<string> => {
+  console.log(`[GeminiService] Extracting text from image (via document method): ${filePath}`);
   return extractTextFromDocument(filePath);
 };
 
@@ -95,10 +99,12 @@ export const extractTextFromImage = async (filePath: string): Promise<string> =>
  * Process a PDF file (convenience method that calls extractTextFromDocument)
  */
 export const extractTextFromPDF = async (filePath: string): Promise<string> => {
+  console.log(`[GeminiService] Extracting text from PDF (via document method): ${filePath}`);
   return extractTextFromDocument(filePath);
 };
 
 export async function getEmbeddings(texts: string) {
+  console.log(`[GeminiService] Generating embeddings for ${texts.split(';').length} text segments.`);
   const project = PROJECT_ID;
   const model = 'text-embedding-005';
   const task = 'QUESTION_ANSWERING';
@@ -124,6 +130,7 @@ export async function getEmbeddings(texts: string) {
     const valuesProto = embeddingsProto.structValue.fields.values;
     return valuesProto.listValue.values.map((v: any) => v.numberValue);
   });
+  console.log(`[GeminiService] Successfully generated ${embeddings.length} embedding(s).`);
   return embeddings[0];
 }
 
@@ -139,8 +146,10 @@ export const generateLessonContentSpecific = async (
   title: string,
   description: string
 ): Promise<any> => {
+  console.log(`[GeminiService] Generating specific lesson content for lesson: ${lessonId}, title: ${title}`);
   try {
     if (!generativeModel) {
+      console.error('[GeminiService] Gemini model not initialized during specific lesson generation.');
       throw new Error('Gemini model not initialized');
     }
 
@@ -231,11 +240,12 @@ export const generateLessonContentSpecific = async (
     const jsonStr = responseText.substring(jsonStart, jsonEnd);
     const lessonContent = JSON.parse(jsonStr);
 
+    console.log(`[GeminiService] Successfully generated specific lesson content for lesson: ${lessonId}`);
     return lessonContent;
   } catch (error) {
-    console.error('Error generating lesson content with Gemini:', error);
+    console.error(`[GeminiService] Error generating specific lesson content for lesson ${lessonId}:`, error);
     throw new Error(
-      `Failed to generate lesson content: ${error instanceof Error ? error.message : String(error)}`
+      `[GeminiService] Failed to generate lesson content: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 };
@@ -252,8 +262,10 @@ export const generateLessonContent = async (
   subjectId: string,
   subjectName: string
 ): Promise<any> => {
+  console.log(`[GeminiService] Generating lesson content from syllabus: ${syllabusPath} for subject: ${subjectId}`);
   try {
     if (!generativeModel) {
+      console.error('[GeminiService] Gemini model not initialized during syllabus lesson generation.');
       throw new Error('Gemini model not initialized');
     }
 
@@ -321,11 +333,12 @@ export const generateLessonContent = async (
     const jsonStr = responseText.substring(jsonStart, jsonEnd);
     const lessons = JSON.parse(jsonStr);
 
+    console.log(`[GeminiService] Successfully generated ${lessons.length} lessons from syllabus: ${syllabusPath}`);
     return lessons;
   } catch (error) {
-    console.error('Error generating lessons with Gemini:', error);
+    console.error(`[GeminiService] Error generating lessons from syllabus ${syllabusPath} with Gemini:`, error);
     throw new Error(
-      `Failed to generate lessons: ${error instanceof Error ? error.message : String(error)}`
+      `[GeminiService] Failed to generate lessons: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 };
