@@ -4,7 +4,7 @@ import { updateQuizAverage } from './stats.service';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
 const LOCATION = 'us-central1';
-const MODEL_NAME = 'gemini-2.0-pro-exp-02-05';
+const MODEL_NAME = 'gemini-2.5-pro-exp-03-25';
 
 let vertexAI: VertexAI;
 let generativeModel: any;
