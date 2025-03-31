@@ -57,7 +57,7 @@ export const submitQuizAttemptSchema = z.object({
       .array(
         z.object({
           questionId: z.string().min(1),
-          selectedAnswer: z.string().min(1, 'Selected answer cannot be empty'),
+          answerId: z.string().min(1, 'Selected answer cannot be empty'),
         })
       )
       .min(1, 'Must submit at least one answer'),

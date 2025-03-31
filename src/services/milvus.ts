@@ -9,11 +9,12 @@ const client = new MilvusClient({ address: MILVUS_HOST });
 
 (async () => {
   try {
+    console.log('[MilvusService] Initializing Milvus connection, collection, and index...');
     await createCollection();
     await createIndex();
-    console.log('Milvus collection and index initialized successfully');
+    console.log('[MilvusService] Milvus collection and index initialized successfully.');
   } catch (error) {
-    console.error('Error initializing Milvus:', error);
+    console.error('[MilvusService] Error initializing Milvus:', error);
   }
 })();
 
@@ -25,8 +26,10 @@ export async function insertEmbeddings(
     dataSourceId: string;
   }
 ) {
+  console.log(`[MilvusService] Inserting embeddings for user: ${userId}, dataSource: ${metadata.dataSourceId}, subject: ${metadata.subjectId || 'N/A'}`);
   try {
     for (const doc of documents) {
+      console.log(`[MilvusService] Getting embedding for document chunk...`);
       const embedding = await getEmbeddings(doc.pageContent);
       if (!embedding) continue;
 
@@ -50,10 +53,11 @@ export async function insertEmbeddings(
         ],
       });
 
-      console.log('Inserted chunk with subject metadata');
+      console.log(`[MilvusService] Inserted chunk for dataSource: ${metadata.dataSourceId}`);
     }
+    console.log(`[MilvusService] Finished inserting ${documents.length} embeddings for dataSource: ${metadata.dataSourceId}`);
   } catch (error) {
-    console.error('Error inserting embeddings:', error);
+    console.error(`[MilvusService] Error inserting embeddings for user ${userId}, dataSource ${metadata.dataSourceId}:`, error);
   }
 }
 
@@ -66,26 +70,29 @@ export async function searchMilvus(
     dataSourceIds?: string[];
   } = {}
 ) {
+  console.log(`[MilvusService] Searching Milvus for query: "${queryText}", user: ${userId}, options:`, options);
   try {
     const collections = await client.showCollections();
     if (!collections.data.some((c) => c.name === COLLECTION_NAME)) {
-      console.log(`Collection ${COLLECTION_NAME} doesn't exist yet`);
+      console.log(`[MilvusService] Collection ${COLLECTION_NAME} doesn't exist yet. Cannot search.`);
       return [];
     }
 
     try {
+      console.log(`[MilvusService] Loading collection ${COLLECTION_NAME}...`);
       await client.loadCollection({ collection_name: COLLECTION_NAME });
+      console.log(`[MilvusService] Collection ${COLLECTION_NAME} loaded.`);
     } catch (error) {
-      console.error('Error loading collection:', error);
+      console.error(`[MilvusService] Error loading collection ${COLLECTION_NAME}:`, error);
       return [];
     }
 
     const { topK = 2, subjectId, dataSourceIds } = options;
 
-    console.log('Getting query embeddings...');
+    console.log('[MilvusService] Getting query embeddings...');
     const queryEmbedding = await getEmbeddings(queryText);
     if (!queryEmbedding) {
-      console.log('Failed to generate embedding');
+      console.log('[MilvusService] Failed to generate query embedding.');
       return [];
     }
 
@@ -98,9 +105,10 @@ export async function searchMilvus(
       if (subjectId) filter += ` && subject_id == "${subjectId}"`;
     }
 
-    console.log(`Using filter: ${filter}`);
+    console.log(`[MilvusService] Using search filter: ${filter}`);
 
     try {
+      console.log(`[MilvusService] Performing search with topK=${topK}...`);
       const searchResults = await client.search({
         collection_name: COLLECTION_NAME,
         vector: queryEmbedding,
@@ -110,16 +118,17 @@ export async function searchMilvus(
       });
 
       if (!searchResults || searchResults.results.length === 0) {
-        console.log('No results found with the specified filter');
+        console.log('[MilvusService] No results found with the specified filter.');
         if (dataSourceIds && dataSourceIds.length > 0) {
           if (subjectId) {
-            console.log('Falling back to subject-based search');
+            console.log('[MilvusService] Falling back to subject-based search as dataSource search yielded no results.');
             return await searchMilvus(queryText, userId, { topK, subjectId });
           }
         }
         return [];
       }
 
+      console.log(`[MilvusService] Found ${searchResults.results.length} results.`);
       return searchResults.results.map((result) => ({
         text: result.text,
         score: result.score,
@@ -127,7 +136,7 @@ export async function searchMilvus(
       }));
     } catch (error) {
       if ((error as Error).toString().includes('IndexNotExist')) {
-        console.log('Index not found, attempting to create it...');
+        console.log('[MilvusService] Index not found, attempting to create it...');
         await createIndex();
 
         try {
@@ -149,20 +158,21 @@ export async function searchMilvus(
             metadata: result.metadata,
           }));
         } catch (retryError) {
-          console.error('Error retrying search after creating index:', retryError);
+          console.error('[MilvusService] Error retrying search after creating index:', retryError);
           return [];
         }
       }
-      console.error('Error searching Milvus:', error);
+      console.error('[MilvusService] Error searching Milvus:', error);
       return [];
     }
   } catch (error) {
-    console.error('Error in searchMilvus:', error);
+    console.error('[MilvusService] General error in searchMilvus:', error);
     return [];
   }
 }
 
 export async function deleteEmbeddingsByDataSource(dataSourceId: string) {
+  console.log(`[MilvusService] Deleting embeddings for data source: ${dataSourceId}`);
   try {
     await client.loadCollection({ collection_name: COLLECTION_NAME });
 
@@ -171,13 +181,14 @@ export async function deleteEmbeddingsByDataSource(dataSourceId: string) {
       filter: `data_source_id == "${dataSourceId}"`,
     });
 
-    console.log(`Deleted embeddings for data source: ${dataSourceId}`);
+    console.log(`[MilvusService] Successfully deleted embeddings for data source: ${dataSourceId}`);
   } catch (error) {
-    console.error('Error deleting embeddings:', error);
+    console.error(`[MilvusService] Error deleting embeddings for data source ${dataSourceId}:`, error);
   }
 }
 
 export async function deleteEmbeddingsBySubject(subjectId: string) {
+  console.log(`[MilvusService] Deleting embeddings for subject: ${subjectId}`);
   try {
     await client.loadCollection({ collection_name: COLLECTION_NAME });
 
@@ -186,28 +197,27 @@ export async function deleteEmbeddingsBySubject(subjectId: string) {
       filter: `subject_id == "${subjectId}"`,
     });
 
-    console.log(`Deleted embeddings for subject: ${subjectId}`);
+    console.log(`[MilvusService] Successfully deleted embeddings for subject: ${subjectId}`);
   } catch (error) {
-    console.error('Error deleting embeddings by subject:', error);
+    console.error(`[MilvusService] Error deleting embeddings by subject ${subjectId}:`, error);
   }
 }
 
 export async function resetMilvusIndex() {
+  console.log('[MilvusService] Attempting to reset Milvus index...');
   try {
-    console.log('Attempting to reset Milvus index...');
-
     const collections = await client.showCollections();
     if (!collections.data.some((c) => c.name === COLLECTION_NAME)) {
-      console.log(`Collection ${COLLECTION_NAME} doesn't exist, creating new collection...`);
+      console.log(`[MilvusService] Collection ${COLLECTION_NAME} doesn't exist, creating new collection...`);
       await createCollection();
     } else {
       try {
         await client.dropIndex({
           collection_name: COLLECTION_NAME,
         });
-        console.log('Dropped existing index');
+        console.log('[MilvusService] Dropped existing index.');
       } catch (error) {
-        console.log('No existing index to drop or error dropping index:', error);
+        console.log('[MilvusService] No existing index to drop or error dropping index:', error);
       }
     }
 
@@ -216,19 +226,20 @@ export async function resetMilvusIndex() {
     await client.loadCollection({
       collection_name: COLLECTION_NAME,
     });
-
+    console.log('[MilvusService] Milvus index reset successfully.');
     return { success: true, message: 'Milvus index reset successfully' };
   } catch (error) {
-    console.error('Error resetting Milvus index:', error);
+    console.error('[MilvusService] Error resetting Milvus index:', error);
     return { success: false, message: (error as Error).message };
   }
 }
 
 async function createCollection() {
+  console.log(`[MilvusService] Checking/Creating collection: ${COLLECTION_NAME}`);
   try {
     const collections = await client.showCollections();
     if (collections.data.some((c) => c.name === COLLECTION_NAME)) {
-      console.log('Collection already exists, skipping...');
+      console.log(`[MilvusService] Collection ${COLLECTION_NAME} already exists, skipping creation.`);
       return;
     }
 
@@ -262,18 +273,19 @@ async function createCollection() {
       ],
     });
 
-    console.log(`Collection '${COLLECTION_NAME}' created successfully.`);
+    console.log(`[MilvusService] Collection '${COLLECTION_NAME}' created successfully.`);
   } catch (error) {
-    console.error('Error creating collection:', error);
+    console.error(`[MilvusService] Error creating collection ${COLLECTION_NAME}:`, error);
     throw error;
   }
 }
 
 async function createIndex() {
+  console.log(`[MilvusService] Checking/Creating index for collection: ${COLLECTION_NAME}`);
   try {
     const collections = await client.showCollections();
     if (!collections.data.some((c) => c.name === COLLECTION_NAME)) {
-      console.log(`Collection ${COLLECTION_NAME} doesn't exist yet. Create collection first.`);
+      console.log(`[MilvusService] Collection ${COLLECTION_NAME} doesn't exist yet. Cannot create index.`);
       return;
     }
 
@@ -287,11 +299,11 @@ async function createIndex() {
       );
 
       if (embeddingIndex) {
-        console.log('Index already exists, skipping...');
+        console.log(`[MilvusService] Index on 'embedding' field already exists for ${COLLECTION_NAME}, skipping creation.`);
         return;
       }
     } catch (error) {
-      console.log('Index may not exist, creating now...');
+      console.log('[MilvusService] Index does not exist or error describing index, proceeding with creation...');
     }
 
     await client.createIndex({
@@ -302,9 +314,9 @@ async function createIndex() {
       params: { M: 16, efConstruction: 200 },
     });
 
-    console.log(`Index created on '${COLLECTION_NAME}'.`);
+    console.log(`[MilvusService] Index created on 'embedding' field for '${COLLECTION_NAME}'.`);
   } catch (error) {
-    console.error('Error creating index:', error);
+    console.error(`[MilvusService] Error creating index for ${COLLECTION_NAME}:`, error);
     throw error;
   }
 }
