@@ -113,7 +113,8 @@ _Benefit: Insights into learning effectiveness._
 
 The Learnability backend follows a modular architecture:
 
-```flowchart LR
+```mermaid
+flowchart LR
     User --> API[Express API Gateway]
     API --> Auth[Auth Middleware JWT]
     Auth --> Routes[API Routes]
