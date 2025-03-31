@@ -29,13 +29,11 @@ export const getQuizAnalytics = async (quizId: string, userId: string) => {
     };
   }
 
-  // Calculate basic stats
   const averageScore = attempts.reduce((sum, a) => sum + a.percentage, 0) / attempts.length;
   const bestScore = Math.max(...attempts.map((a) => a.percentage));
   const worstScore = Math.min(...attempts.map((a) => a.percentage));
   const passRate = (attempts.filter((a) => a.passed).length / attempts.length) * 100;
 
-  // Question-specific analytics
   const questions = (quiz.questions || []) as any[];
   const questionAnalytics = questions.map((q) => {
     const questionAttempts = attempts.flatMap((a) =>
@@ -53,7 +51,6 @@ export const getQuizAnalytics = async (quizId: string, userId: string) => {
     };
   });
 
-  // Progress trend
   const progressTrend = attempts.map((a) => ({
     date: a.completedAt,
     score: a.percentage,
@@ -91,13 +88,11 @@ export const getUserQuizAnalytics = async (userId: string) => {
     };
   }
 
-  // Count quizzes with at least one attempt
   const quizzesWithAttempts = quizzes.filter((q) => {
     const attempts = (q.attempts || []) as any[];
     return attempts.length > 0;
   });
 
-  // Calculate overall average score
   let totalScore = 0;
   let totalAttempts = 0;
 
@@ -111,7 +106,6 @@ export const getUserQuizAnalytics = async (userId: string) => {
 
   const averageScore = totalAttempts > 0 ? totalScore / totalAttempts : 0;
 
-  // Subject performance
   const subjectPerformance: Record<string, { count: number; totalScore: number }> = {};
 
   for (const quiz of quizzes) {
@@ -132,7 +126,6 @@ export const getUserQuizAnalytics = async (userId: string) => {
     });
   }
 
-  // Get subject names and calculate averages
   const subjectsWithNames = await Promise.all(
     Object.keys(subjectPerformance).map(async (subjectId) => {
       const subject = await db.subject.findUnique({
@@ -151,7 +144,6 @@ export const getUserQuizAnalytics = async (userId: string) => {
     })
   );
 
-  // Recent activity (last 10 attempts across all quizzes)
   const allAttempts = quizzes.flatMap((q) => {
     const attempts = (q.attempts || []) as any[];
     return attempts.map((a) => ({
@@ -161,7 +153,6 @@ export const getUserQuizAnalytics = async (userId: string) => {
     }));
   });
 
-  // Sort by date and take the most recent 10
   const recentActivity = allAttempts
     .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
     .slice(0, 10);

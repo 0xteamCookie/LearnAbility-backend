@@ -89,7 +89,6 @@ export const getQuizById = async (req: Request, res: Response) => {
     const hasAttempted = attempts.length > 0;
     const lastAttempt = hasAttempted ? attempts[attempts.length - 1] : null;
 
-    // Add attempt status details
     const quizWithMeta = {
       ...quiz,
       hasAttempted,

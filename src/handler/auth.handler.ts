@@ -97,14 +97,11 @@ export const getProfile = async (req: Request, res: Response) => {
       );
 
       if (differenceInDays === 1) {
-        // user logged in the next day, increase streak
         updatedStreak += 1;
       } else if (differenceInDays > 1) {
-        // user missed a day, reset streak
         updatedStreak = 1;
       }
     } else {
-      // first time logging in, set streak to 1
       updatedStreak = 1;
     }
 

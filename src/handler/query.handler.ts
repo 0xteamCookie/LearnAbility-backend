@@ -5,7 +5,7 @@ import db from '../db/db';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
 const LOCATION = 'us-central1';
-const MODEL_NAME = 'gemini-2.0-pro-exp-02-05';
+const MODEL_NAME = 'gemini-2.5-pro-exp-03-25';
 
 let vertexAI: VertexAI;
 let generativeModel: any;
@@ -94,9 +94,6 @@ export const answerUserQuery = async (req: Request, res: Response) => {
       from the context and suggest what additional information might be needed.
       Always be encouraging, clear, and explain concepts in a way that's easy to understand.
     `;
-
-      // console.log('contextText', contextText);
-      // console.log('query', query);
 
       const result = await generativeModel.generateContent({
         contents: [

@@ -2,6 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
 import { authRoutes } from './routes/auth.routes';
 import { statsRoutes } from './routes/stats.routes';
 import { dataSourceRoutes } from './routes/source.routes';
@@ -15,14 +17,57 @@ import placeholderHandler from './handler/placeholder.handler';
 
 dotenv.config();
 
+const swaggerDefinition = {
+  openapi: '3.0.0',
+  info: {
+    title: 'Learnability Backend API',
+    version: '1.0.0',
+    description:
+      'Backend API for the Learnability personalized learning platform. Features user management, content management, AI-powered lesson/quiz generation, and semantic search.',
+    license: {
+      name: 'GNU GPLv3',
+      url: 'https://www.gnu.org/licenses/gpl-3.0.en.html',
+    },
+  },
+  servers: [
+    {
+      url: `http://localhost:${process.env.PORT || 30000}/api/v1`,
+      description: 'Development server',
+    },
+  ],
+
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
+  },
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
+};
+
+const options = {
+  swaggerDefinition,
+
+  apis: ['./src/routes/*.ts'],
+};
+
+const swaggerSpec = swaggerJsdoc(options);
+
 const app = express();
 app.use(cookieParser());
 
 app.use(express.json());
 app.use(
   cors({
-    origin: 'http://localhost:3001',
-    credentials: true, // allow sending cookies
+    origin: '*', //For testing only
+    credentials: true,
   })
 );
 
@@ -36,6 +81,8 @@ app.use('/webhook', webhookRoutes);
 app.use('/api/v1/quizzes', quizRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.get('/placeholder.svg', placeholderHandler.getSVG);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const PORT = process.env.PORT || 30000;
 

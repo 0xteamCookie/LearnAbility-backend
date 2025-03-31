@@ -18,7 +18,6 @@ export const getStats = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
 
-    // Ensure stats exist by calling getOrCreateUserStats
     const userStats = await getOrCreateUserStats(userId);
 
     return void res.json({
@@ -45,7 +44,6 @@ export const markLessonCompleted = async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { lessonId } = req.params;
 
-    // Verify lesson exists
     const lesson = await db.lesson.findUnique({
       where: { id: lessonId },
     });
@@ -57,13 +55,11 @@ export const markLessonCompleted = async (req: Request, res: Response) => {
       });
     }
 
-    // Update lesson progress to 100
     await db.lesson.update({
       where: { id: lessonId },
       data: { progress: 100 },
     });
 
-    // Increment completed lessons count
     await incrementCompletedLessons(userId);
 
     return void res.json({
@@ -90,12 +86,10 @@ export const trackStudyActivity = async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { activityType, duration } = req.body;
 
-    // Update last studied timestamp
     await updateLastStudiedAt(userId);
 
-    // Update weekly progress based on duration (in minutes)
     if (duration && typeof duration === 'number') {
-      await updateWeeklyProgress(userId, Math.floor(duration / 5)); // 1 progress point per 5 minutes
+      await updateWeeklyProgress(userId, Math.floor(duration / 5));
     }
 
     return void res.json({

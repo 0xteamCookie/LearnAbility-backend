@@ -4,7 +4,7 @@ import mime from 'mime-types';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
 const LOCATION = 'us-central1';
-const MODEL_NAME = 'gemini-2.0-pro-exp-02-05';
+const MODEL_NAME = 'gemini-2.5-pro-exp-03-25';
 
 let vertexAI: VertexAI;
 let generativeModel: any;
@@ -103,7 +103,7 @@ export async function getEmbeddings(texts: string) {
   const model = 'text-embedding-005';
   const task = 'QUESTION_ANSWERING';
   const dimensionality = 0;
-  const apiEndpoint = 'europe-west4-aiplatform.googleapis.com';
+  const apiEndpoint = 'us-central1-aiplatform.googleapis.com';
   const aiplatform = require('@google-cloud/aiplatform');
   const { PredictionServiceClient } = aiplatform.v1;
   const { helpers } = aiplatform;
@@ -166,12 +166,12 @@ export const generateLessonContentSpecific = async (
               "id": "unique-block-id",
               "type": "heading|text|list|code|equation|callout|quiz|exercise|checkpoint|table|definition",
               "order": 1,
-              // Additional properties based on block type
+              
             },
-            // More blocks...
+            
           ]
         },
-        // More pages...
+        
       ]
     }
 
@@ -196,12 +196,16 @@ export const generateLessonContentSpecific = async (
     `;
 
     const result = await generativeModel.generateContent({
-      contents: [{ 
-        role: 'user', 
-        parts: [{ 
-          text: systemPrompt
-        }] 
-      }],
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: systemPrompt,
+            },
+          ],
+        },
+      ],
       generationConfig: {
         maxOutputTokens: 8192,
         temperature: 0.7,

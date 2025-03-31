@@ -4,10 +4,7 @@ const router = Router();
 
 router.post('/', async (req: Request, res: Response) => {
   try {
-    // console.log(req.body);
     const { message } = req.body;
-
-    // console.log('Received message:', message);
 
     const { type = 'function-call', functionCall = {} } = message;
 

@@ -21,7 +21,6 @@ export const updateStudyStreak = async (userId: string): Promise<void> => {
     const today = format(now, 'yyyy-MM-dd');
     const lastStudied = userStats.lastStudiedAt;
 
-    // Current streak value
     let newStreak = userStats.studyStreak;
 
     console.log('[STREAK] Processing streak update:', {
@@ -32,35 +31,28 @@ export const updateStudyStreak = async (userId: string): Promise<void> => {
     });
 
     if (!lastStudied) {
-      // First time studying
       console.log('[STREAK] First time studying, setting streak to 1');
       newStreak = 1;
     } else {
-      // Get the date portion of the last study time
       const lastStudiedDate = format(lastStudied, 'yyyy-MM-dd');
 
-      // If already studied today, don't update the streak
       if (lastStudiedDate === today) {
         console.log('[STREAK] Already studied today, no change to streak');
         return;
       }
 
-      // Calculate days between last study and today
       const daysSinceLastStudy = differenceInDays(now, lastStudied);
       console.log('[STREAK] Days since last study:', daysSinceLastStudy);
 
       if (daysSinceLastStudy === 1) {
-        // Consecutive day, increment streak
         newStreak += 1;
         console.log('[STREAK] Consecutive day, incrementing streak to:', newStreak);
       } else {
-        // Missed a day, reset streak
         newStreak = 1;
         console.log('[STREAK] Missed day(s), resetting streak to 1');
       }
     }
 
-    // Update the database with new streak value
     await db.userStats.update({
       where: { userId },
       data: {
@@ -92,10 +84,9 @@ export const incrementCompletedLessons = async (userId: string): Promise<void> =
 
     console.log('[LESSONS] Incremented completed lessons for user:', userId);
 
-    // Also update study streak when completing a lesson
     await updateStudyStreak(userId);
-    // Also update weekly progress
-    await updateWeeklyProgress(userId, 10); // Increment by fixed amount for completing a lesson
+
+    await updateWeeklyProgress(userId, 10);
   } catch (error) {
     console.error('[LESSONS] Error incrementing completed lessons:', error);
   }
@@ -110,12 +101,10 @@ export const updateWeeklyProgress = async (userId: string, amount: number): Prom
     const userStats = await getOrCreateUserStats(userId);
     const now = new Date();
 
-    // Get current week identifier (year-weekNum)
     const currentYear = getYear(now);
     const currentWeek = getWeek(now);
     const currentWeekId = `${currentYear}-${currentWeek}`;
 
-    // Get week identifier from last study session
     const lastStudied = userStats.lastStudiedAt;
     const lastWeekId = lastStudied ? `${getYear(lastStudied)}-${getWeek(lastStudied)}` : null;
 
@@ -127,7 +116,6 @@ export const updateWeeklyProgress = async (userId: string, amount: number): Prom
       incrementAmount: amount,
     });
 
-    // Reset weekly progress if it's a new week
     if (!lastWeekId || lastWeekId !== currentWeekId) {
       console.log('[WEEKLY] New week detected, resetting progress to:', amount);
       await db.userStats.update({
@@ -138,7 +126,6 @@ export const updateWeeklyProgress = async (userId: string, amount: number): Prom
         },
       });
     } else {
-      // Increment existing weekly progress
       const newProgress = userStats.weeklyProgress + amount;
       console.log(
         '[WEEKLY] Same week, incrementing progress from',
@@ -168,7 +155,6 @@ export const updateQuizAverage = async (userId: string, newQuizScore: number): P
   try {
     const userStats = await getOrCreateUserStats(userId);
 
-    // Get count of completed quizzes (those with attempts)
     const completedQuizzes = await db.quiz.count({
       where: {
         userId,
@@ -176,11 +162,9 @@ export const updateQuizAverage = async (userId: string, newQuizScore: number): P
       },
     });
 
-    // Calculate new average
     let newAverage = newQuizScore;
 
     if (userStats.quizAverage) {
-      // If there's an existing average, use a weighted calculation
       newAverage =
         (userStats.quizAverage * (completedQuizzes - 1) + newQuizScore) / completedQuizzes;
     }
@@ -201,10 +185,9 @@ export const updateQuizAverage = async (userId: string, newQuizScore: number): P
       },
     });
 
-    // Also update study streak when completing a quiz
     await updateStudyStreak(userId);
-    // Also update weekly progress
-    await updateWeeklyProgress(userId, 15); // Quizzes give more progress
+
+    await updateWeeklyProgress(userId, 15);
   } catch (error) {
     console.error('[QUIZ] Error updating quiz average:', error);
   }
@@ -227,7 +210,6 @@ export const updateLastStudiedAt = async (userId: string): Promise<void> => {
       },
     });
 
-    // Also update study streak
     await updateStudyStreak(userId);
   } catch (error) {
     console.error('[TIMESTAMP] Error updating last studied timestamp:', error);

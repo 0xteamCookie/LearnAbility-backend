@@ -4,7 +4,7 @@ import { updateQuizAverage } from './stats.service';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
 const LOCATION = 'us-central1';
-const MODEL_NAME = 'gemini-2.0-pro-exp-02-05';
+const MODEL_NAME = 'gemini-2.5-pro-exp-03-25';
 
 let vertexAI: VertexAI;
 let generativeModel: any;
@@ -214,6 +214,10 @@ export const recordQuizAttempt = async (
   startedAt: Date
 ): Promise<any> => {
   try {
+    if (!generativeModel) {
+      throw new Error('Gemini model not initialized');
+    }
+
     const quiz = await db.quiz.findUnique({
       where: { id: quizId },
     });
@@ -225,47 +229,95 @@ export const recordQuizAttempt = async (
     const questions = quiz.questions as any[];
     let score = 0;
     let maxScore = 0;
+    const feedbackPromises: Promise<any>[] = [];
 
     const scoredAnswers = userAnswers
-      .map((answer) => {
-        const question = questions.find((q) => q.id === answer.questionId);
+      .map((userAnswer) => {
+        const question = questions.find((q) => q.id === userAnswer.questionId);
         if (!question) return null;
 
-        maxScore += question.points;
+        const questionPoints = question.points || 1;
+        maxScore += questionPoints;
         let isCorrect = false;
         let pointsEarned = 0;
+        let feedback: string | null = null;
 
         if (question.type === 'essay') {
           isCorrect = false;
           pointsEarned = 0;
         } else if (question.type === 'multiple-choice' || question.type === 'true-false') {
           const correctAnswer = question.answers.find((a: any) => a.isCorrect);
-          if (correctAnswer && answer.answerId === correctAnswer.id) {
+          if (correctAnswer && userAnswer.answerId === correctAnswer.id) {
             isCorrect = true;
-            pointsEarned = question.points;
-            score += question.points;
+            pointsEarned = questionPoints;
+            score += questionPoints;
           }
         } else if (question.type === 'fill-blank') {
           const correctAnswer = question.answers.find((a: any) => a.isCorrect);
           if (
             correctAnswer &&
-            answer.text &&
-            correctAnswer.content.toLowerCase().trim() === answer.text.toLowerCase().trim()
+            userAnswer.text &&
+            correctAnswer.content.toLowerCase().trim() === userAnswer.text.toLowerCase().trim()
           ) {
             isCorrect = true;
-            pointsEarned = question.points;
-            score += question.points;
+            pointsEarned = questionPoints;
+            score += questionPoints;
           }
+        }
+
+        if (!isCorrect) {
+          const correctAnswerDetail = question.answers.find((a: any) => a.isCorrect);
+          const givenAnswerDetail = question.answers.find((a: any) => a.id === userAnswer.answerId);
+
+          const prompt = `
+          Analyze the following quiz question and the user's incorrect answer. Provide concise, helpful feedback explaining why the correct answer is right and potentially why the user's answer was wrong.
+
+          Question: ${question.content}
+          Options: ${JSON.stringify(question.answers.map((a: any) => a.content))}
+          Correct Answer: ${correctAnswerDetail?.content || 'N/A'}
+          User's Answer: ${givenAnswerDetail?.content || userAnswer.text || 'N/A'}
+          Existing Explanation (if any): ${question.explanation || 'None'}
+
+          Feedback:`;
+
+          feedbackPromises.push(
+            generativeModel
+              .generateContent({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                generationConfig: {
+                  maxOutputTokens: 200,
+                  temperature: 0.5,
+                },
+              })
+              .then((result: any) => {
+                try {
+                  const feedbackText =
+                    result?.response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
+                    'Could not generate feedback.';
+                  return { questionId: question.id, feedback: feedbackText };
+                } catch (e) {
+                  console.error(`Error processing Gemini feedback for question ${question.id}:`, e);
+                  return { questionId: question.id, feedback: 'Error generating feedback.' };
+                }
+              })
+              .catch((error: any) => {
+                console.error(
+                  `Error calling Gemini for feedback on question ${question.id}:`,
+                  error
+                );
+                return { questionId: question.id, feedback: 'Error generating feedback.' };
+              })
+          );
         }
 
         return {
           questionId: question.id,
-          givenAnswer: answer.answerId || answer.text || '',
+          givenAnswer: userAnswer.answerId || userAnswer.text || '',
           isCorrect,
           pointsEarned,
         };
       })
-      .filter(Boolean);
+      .filter((answer): answer is NonNullable<typeof answer> => answer !== null);
 
     const attempt = {
       id: `attempt_${Date.now()}`,
@@ -277,7 +329,16 @@ export const recordQuizAttempt = async (
       startedAt: startedAt.toISOString(),
       completedAt: new Date().toISOString(),
       answers: scoredAnswers,
+      feedback: [],
     };
+
+    const feedbackResults = await Promise.all(feedbackPromises);
+    const feedbackMap = new Map(feedbackResults.map((f) => [f.questionId, f.feedback]));
+
+    attempt.answers = attempt.answers.map((ans) => ({
+      ...ans,
+      feedback: feedbackMap.get(ans.questionId) || null,
+    }));
 
     let attempts = (quiz.attempts as any[]) || [];
     attempts.push(attempt);
