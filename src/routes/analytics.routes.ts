@@ -59,7 +59,7 @@ const router = Router();
  *     #     message: Analytics data not found
  */
 
-router.use(authenticate); // Apply authentication to all analytics routes
+router.use(authenticate);
 
 /**
  * @swagger

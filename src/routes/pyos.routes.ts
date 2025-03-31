@@ -195,9 +195,7 @@ const router = Router();
  *     # (Should be picked up from source.routes.ts if parsed together)
  */
 
-router.use(authenticate); // Apply authentication to all routes in this file
-
-// --- Subject Routes ---
+router.use(authenticate);
 
 /**
  * @swagger
@@ -466,8 +464,6 @@ router.post('/subjects/syllabus', upload.single('document'), subjectHandler.uplo
  */
 router.get('/subjects/:subjectId/syllabus', subjectHandler.getSyllabus);
 
-// --- Lesson Routes ---
-
 /**
  * @swagger
  * /pyos/subjects/{subjectId}/lessons:
@@ -570,8 +566,6 @@ router.get('/subjects/:subjectId/lessons', subjectHandler.generateLessons);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/:subjectId/:lessonId', subjectHandler.generateLessonsC);
-
-// --- Tag Routes ---
 
 /**
  * @swagger
@@ -686,9 +680,6 @@ router.post('/tags', tagHandler.createTag);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete('/tags/:id', tagHandler.deleteTag);
-
-// --- Material/DataSource Routes (Duplicates from source.routes.ts) ---
-// Using 'DataSources (PYOS)' tag for distinction, or reuse 'DataSources'
 
 /**
  * @swagger

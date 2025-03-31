@@ -17,16 +17,16 @@ import placeholderHandler from './handler/placeholder.handler';
 
 dotenv.config();
 
-// Swagger definition
 const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
     title: 'Learnability Backend API',
     version: '1.0.0',
-    description: 'Backend API for the Learnability personalized learning platform. Features user management, content management, AI-powered lesson/quiz generation, and semantic search.',
+    description:
+      'Backend API for the Learnability personalized learning platform. Features user management, content management, AI-powered lesson/quiz generation, and semantic search.',
     license: {
       name: 'GNU GPLv3',
-      url: 'https://www.gnu.org/licenses/gpl-3.0.en.html', // Assuming based on README
+      url: 'https://www.gnu.org/licenses/gpl-3.0.en.html',
     },
   },
   servers: [
@@ -34,33 +34,30 @@ const swaggerDefinition = {
       url: `http://localhost:${process.env.PORT || 30000}/api/v1`,
       description: 'Development server',
     },
-    // Add other servers like production here if applicable
   ],
-  // Optional: Define security schemes like JWT
+
   components: {
     securitySchemes: {
-      bearerAuth: { // Can be any name
+      bearerAuth: {
         type: 'http',
         scheme: 'bearer',
-        bearerFormat: 'JWT', // Optional
+        bearerFormat: 'JWT',
       },
     },
   },
   security: [
     {
-      bearerAuth: [], // Apply JWT globally
+      bearerAuth: [],
     },
   ],
 };
 
-// Options for swagger-jsdoc
 const options = {
   swaggerDefinition,
-  // Paths to files containing OpenAPI definitions (your route files)
+
   apis: ['./src/routes/*.ts'],
 };
 
-// Initialize swagger-jsdoc
 const swaggerSpec = swaggerJsdoc(options);
 
 const app = express();
@@ -70,7 +67,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: '*', //For testing only
-    credentials: true, // allow sending cookies
+    credentials: true,
   })
 );
 
@@ -85,14 +82,11 @@ app.use('/api/v1/quizzes', quizRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.get('/placeholder.svg', placeholderHandler.getSVG);
 
-// Serve Swagger docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Optional: Redirect root to API docs for convenience
-app.get('/', (req, res) => {
-  res.redirect('/api-docs');
-});
-
+// app.get('/', (req, res) => {
+//   res.redirect('/api-docs');
+// });
 
 const PORT = process.env.PORT || 30000;
 

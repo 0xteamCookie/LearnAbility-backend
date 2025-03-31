@@ -252,8 +252,7 @@ const router = Router();
  *   #       explanation: string
  */
 
-
-router.use(authenticate); // Apply authentication to all quiz routes
+router.use(authenticate);
 
 /**
  * @swagger
@@ -488,11 +487,41 @@ router.delete('/:id', deleteQuiz);
  *               properties:
  *                 attemptId:
  *                   type: string
- *                   format: uuid
+ *                   # format: uuid # Use string as per Prisma
  *                 score:
  *                   type: number
  *                   format: float # Or integer
- *                 # Add feedback/correct answers if applicable
+ *                 maxScore:
+ *                   type: number
+ *                   format: float # Or integer
+ *                 percentage:
+ *                   type: number
+ *                   format: float # Or integer
+ *                 passed:
+ *                   type: boolean
+ *                 startedAt:
+ *                   type: string
+ *                   format: date-time
+ *                 completedAt:
+ *                   type: string
+ *                   format: date-time
+ *                 answers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       questionId:
+ *                         type: string
+ *                       givenAnswer:
+ *                         type: string
+ *                       isCorrect:
+ *                         type: boolean
+ *                       pointsEarned:
+ *                         type: number
+ *                       feedback: # Added feedback field
+ *                         type: string
+ *                         nullable: true
+ *                         description: AI-generated feedback for incorrect answers
  *       '400':
  *         description: Bad Request (e.g., validation error, already attempted)
  *         content:

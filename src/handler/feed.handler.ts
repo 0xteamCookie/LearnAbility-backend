@@ -47,7 +47,6 @@ export const showUserFeed = async (req: Request, res: Response) => {
     const contextText = {
       standard: user.standard,
       interests: user.interests,
-      // syllabus: user.syllabusContent,
     };
     console.log(contextText);
     const result = await generativeModel.generateContent({

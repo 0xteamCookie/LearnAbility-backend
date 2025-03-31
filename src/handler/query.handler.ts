@@ -95,9 +95,6 @@ export const answerUserQuery = async (req: Request, res: Response) => {
       Always be encouraging, clear, and explain concepts in a way that's easy to understand.
     `;
 
-      // console.log('contextText', contextText);
-      // console.log('query', query);
-
       const result = await generativeModel.generateContent({
         contents: [
           {

@@ -50,7 +50,7 @@ const router = Router();
  *     #       type: string
  */
 
-router.use(authenticate); // Apply authentication
+router.use(authenticate);
 
 /**
  * @swagger

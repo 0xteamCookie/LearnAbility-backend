@@ -124,7 +124,7 @@ const router = Router();
  *     #       type: string
  */
 
-router.use(authenticate); // Apply authentication to all data source routes
+router.use(authenticate);
 
 /**
  * @swagger
