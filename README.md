@@ -1,8 +1,4 @@
 # Learnability Backend API  
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)  
-![License](https://img.shields.io/badge/license-MIT-blue)  
-![Version](https://img.shields.io/badge/version-1.0.0-blue)  
-
 **Empowering Personalized Learning Experiences**
 
 ---
@@ -18,7 +14,6 @@
 - [Technologies Used](#technologies-used)
 - [API Documentation](#api-documentation)
 - [Setup and Installation](#setup-and-installation)
-- [Contributing](#contributing)
 - [License](#license)
 
 ---
@@ -58,20 +53,11 @@ Learnability Backend API is a robust backend application designed to power an en
 
 ## Technologies Used
 
-### Backend
 - **TypeScript:** Type-safe development.
 - **Express.js:** Web framework for building the API.
-
-### ORM
 - **Prisma:** ORM for database interactions.
-
-### Authentication
 - **JWT:** Secure authentication and authorization.
-
-### AI
 - **Google Vertex AI (Gemini):** AI-powered content generation.
-
-### Search
 - **Milvus:** Vector database for semantic search.
 
 ---
@@ -159,4 +145,4 @@ npm run dev
 ---
 
 ## License
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the GNU General Public License v3.
