@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { upload } from '../middleware/upload.middleware';
+import validate from '../middleware/validate.middleware';
+import { quizIdParamSchema } from '../schemas/quiz.schema';
+import { optionalSubjectIdBodySchema } from '../schemas/pyos.schema';
 import * as sourceHandler from '../handler/source.handler';
 
 const router = Router();
@@ -211,7 +214,13 @@ router.get('/', sourceHandler.getAllDataSources);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/', upload.array('documents', 10), sourceHandler.createDataSource);
+
+router.post(
+  '/',
+  upload.array('documents', 10),
+  validate(optionalSubjectIdBodySchema),
+  sourceHandler.createDataSource
+);
 
 /**
  * @swagger
@@ -255,7 +264,7 @@ router.post('/', upload.array('documents', 10), sourceHandler.createDataSource);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id', sourceHandler.getDataSourceById);
+router.get('/:id', validate(quizIdParamSchema), sourceHandler.getDataSourceById);
 
 /**
  * @swagger
@@ -295,6 +304,6 @@ router.get('/:id', sourceHandler.getDataSourceById);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/:id', sourceHandler.deleteDataSource);
+router.delete('/:id', validate(quizIdParamSchema), sourceHandler.deleteDataSource);
 
 export { router as dataSourceRoutes };

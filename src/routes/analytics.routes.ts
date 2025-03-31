@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
+import validate from '../middleware/validate.middleware';
+import { quizIdParamSchema } from '../schemas/quiz.schema';
 import {
   getQuizAnalyticsHandler,
   getUserQuizAnalyticsHandler,
@@ -133,6 +135,6 @@ router.get('/quizzes', getUserQuizAnalyticsHandler);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/quizzes/:id', getQuizAnalyticsHandler);
+router.get('/quizzes/:id', validate(quizIdParamSchema), getQuizAnalyticsHandler);
 
 export { router as analyticsRoutes };

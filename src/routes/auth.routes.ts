@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { getProfile, login, logout, register } from '../handler/auth.handler';
 import { authenticate } from '../middleware/auth.middleware';
+import validate from '../middleware/validate.middleware';
+import { registerSchema, loginSchema } from '../schemas/auth.schema';
 
 const router = Router();
 
@@ -136,7 +138,7 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/register', register);
+router.post('/register', validate(registerSchema), register);
 
 /**
  * @swagger
@@ -176,7 +178,7 @@ router.post('/register', register);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/login', login);
+router.post('/login', validate(loginSchema), login);
 
 /**
  * @swagger

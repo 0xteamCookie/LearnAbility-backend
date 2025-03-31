@@ -166,12 +166,12 @@ export const generateLessonContentSpecific = async (
               "id": "unique-block-id",
               "type": "heading|text|list|code|equation|callout|quiz|exercise|checkpoint|table|definition",
               "order": 1,
-              // Additional properties based on block type
+              
             },
-            // More blocks...
+            
           ]
         },
-        // More pages...
+        
       ]
     }
 

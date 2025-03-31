@@ -84,10 +84,6 @@ app.get('/placeholder.svg', placeholderHandler.getSVG);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// app.get('/', (req, res) => {
-//   res.redirect('/api-docs');
-// });
-
 const PORT = process.env.PORT || 30000;
 
 app.listen(PORT, () => {

@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
+import validate from '../middleware/validate.middleware';
+import { queryInputSchema } from '../schemas/query.schema';
 import { answerUserQuery } from '../handler/query.handler';
 
 const router = Router();
@@ -105,6 +107,6 @@ router.use(authenticate);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/', answerUserQuery);
+router.post('/', validate(queryInputSchema), answerUserQuery);
 
 export { router as queryRoutes };

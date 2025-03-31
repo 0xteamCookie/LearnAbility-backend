@@ -6,6 +6,12 @@ import {
   updateQuizScore,
 } from '../handler/stats.handler';
 import { authenticate } from '../middleware/auth.middleware';
+import validate from '../middleware/validate.middleware';
+import {
+  lessonIdParamSchema,
+  trackActivitySchema,
+  updateQuizScoreSchema,
+} from '../schemas/stats.schema';
 
 const router = express.Router();
 
@@ -182,7 +188,12 @@ router.get('/', authenticate, getStats);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/lesson/:lessonId/complete', authenticate, markLessonCompleted);
+router.post(
+  '/lesson/:lessonId/complete',
+  authenticate,
+  validate(lessonIdParamSchema),
+  markLessonCompleted
+);
 
 /**
  * @swagger
@@ -229,7 +240,7 @@ router.post('/lesson/:lessonId/complete', authenticate, markLessonCompleted);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/track', authenticate, trackStudyActivity);
+router.post('/track', authenticate, validate(trackActivitySchema), trackStudyActivity);
 
 /**
  * @swagger
@@ -282,6 +293,6 @@ router.post('/track', authenticate, trackStudyActivity);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/quiz', authenticate, updateQuizScore);
+router.post('/quiz', authenticate, validate(updateQuizScoreSchema), updateQuizScore);
 
 export { router as statsRoutes };

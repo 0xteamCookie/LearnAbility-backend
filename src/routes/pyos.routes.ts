@@ -1,6 +1,16 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { upload } from '../middleware/upload.middleware';
+import validate from '../middleware/validate.middleware';
+import { quizIdParamSchema } from '../schemas/quiz.schema';
+import {
+  createSubjectSchema,
+  createTagSchema,
+  subjectIdParamSchema,
+  subjectLessonIdParamSchema,
+  subjectIdBodySchema,
+  optionalSubjectIdBodySchema,
+} from '../schemas/pyos.schema';
 import * as subjectHandler from '../handler/subject.handler';
 import * as tagHandler from '../handler/tag.handler';
 import * as sourceHandler from '../handler/source.handler';
@@ -269,7 +279,7 @@ router.get('/subjects', subjectHandler.getAllSubjects);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/subjects', subjectHandler.createSubject);
+router.post('/subjects', validate(createSubjectSchema), subjectHandler.createSubject);
 
 /**
  * @swagger
@@ -313,7 +323,7 @@ router.post('/subjects', subjectHandler.createSubject);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/subjects/:id', subjectHandler.getSubject);
+router.get('/subjects/:id', validate(quizIdParamSchema), subjectHandler.getSubject);
 
 /**
  * @swagger
@@ -353,7 +363,7 @@ router.get('/subjects/:id', subjectHandler.getSubject);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/subjects/:id', subjectHandler.deleteSubject);
+router.delete('/subjects/:id', validate(quizIdParamSchema), subjectHandler.deleteSubject);
 
 /**
  * @swagger
@@ -418,7 +428,13 @@ router.delete('/subjects/:id', subjectHandler.deleteSubject);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/subjects/syllabus', upload.single('document'), subjectHandler.uploadSyllabus);
+
+router.post(
+  '/subjects/syllabus',
+  upload.single('document'),
+  validate(subjectIdBodySchema),
+  subjectHandler.uploadSyllabus
+);
 
 /**
  * @swagger
@@ -462,7 +478,11 @@ router.post('/subjects/syllabus', upload.single('document'), subjectHandler.uplo
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/subjects/:subjectId/syllabus', subjectHandler.getSyllabus);
+router.get(
+  '/subjects/:subjectId/syllabus',
+  validate(subjectIdParamSchema),
+  subjectHandler.getSyllabus
+);
 
 /**
  * @swagger
@@ -514,7 +534,11 @@ router.get('/subjects/:subjectId/syllabus', subjectHandler.getSyllabus);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/subjects/:subjectId/lessons', subjectHandler.generateLessons);
+router.get(
+  '/subjects/:subjectId/lessons',
+  validate(subjectIdParamSchema),
+  subjectHandler.generateLessons
+);
 
 /**
  * @swagger
@@ -565,7 +589,11 @@ router.get('/subjects/:subjectId/lessons', subjectHandler.generateLessons);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:subjectId/:lessonId', subjectHandler.generateLessonsC);
+router.get(
+  '/:subjectId/:lessonId',
+  validate(subjectLessonIdParamSchema),
+  subjectHandler.generateLessonsC
+);
 
 /**
  * @swagger
@@ -639,7 +667,7 @@ router.get('/tags', tagHandler.getAllTags);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/tags', tagHandler.createTag);
+router.post('/tags', validate(createTagSchema), tagHandler.createTag);
 
 /**
  * @swagger
@@ -679,7 +707,7 @@ router.post('/tags', tagHandler.createTag);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/tags/:id', tagHandler.deleteTag);
+router.delete('/tags/:id', validate(quizIdParamSchema), tagHandler.deleteTag);
 
 /**
  * @swagger
@@ -755,7 +783,7 @@ router.get('/materials', sourceHandler.getAllDataSources);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/materials/:id', sourceHandler.getDataSourceById);
+router.get('/materials/:id', validate(quizIdParamSchema), sourceHandler.getDataSourceById);
 
 /**
  * @swagger
@@ -795,7 +823,7 @@ router.get('/materials/:id', sourceHandler.getDataSourceById);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/materials/:id', sourceHandler.deleteDataSource);
+router.delete('/materials/:id', validate(quizIdParamSchema), sourceHandler.deleteDataSource);
 
 /**
  * @swagger
@@ -850,6 +878,12 @@ router.delete('/materials/:id', sourceHandler.deleteDataSource);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/materials', upload.array('documents', 10), sourceHandler.createDataSource);
+
+router.post(
+  '/materials',
+  upload.array('documents', 10),
+  validate(optionalSubjectIdBodySchema),
+  sourceHandler.createDataSource
+);
 
 export { router as pyosRoutes };

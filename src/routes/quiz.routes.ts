@@ -1,5 +1,12 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
+import validate from '../middleware/validate.middleware';
+import {
+  createQuizSchema,
+  generateQuizSchema,
+  submitQuizAttemptSchema,
+  quizIdParamSchema,
+} from '../schemas/quiz.schema';
 import {
   getAllQuizzes,
   getQuizById,
@@ -328,7 +335,7 @@ router.get('/', getAllQuizzes);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id', getQuizById);
+router.get('/:id', validate(quizIdParamSchema), getQuizById);
 
 /**
  * @swagger
@@ -370,7 +377,7 @@ router.get('/:id', getQuizById);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/', createQuiz);
+router.post('/', validate(createQuizSchema), createQuiz);
 
 /**
  * @swagger
@@ -412,7 +419,7 @@ router.post('/', createQuiz);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/generate', generateQuizHandler);
+router.post('/generate', validate(generateQuizSchema), generateQuizHandler);
 
 /**
  * @swagger
@@ -452,7 +459,7 @@ router.post('/generate', generateQuizHandler);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/:id', deleteQuiz);
+router.delete('/:id', validate(quizIdParamSchema), deleteQuiz);
 
 /**
  * @swagger
@@ -547,7 +554,7 @@ router.delete('/:id', deleteQuiz);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/:id/attempt', submitQuizAttempt);
+router.post('/:id/attempt', validate(submitQuizAttemptSchema), submitQuizAttempt);
 
 /**
  * @swagger
@@ -593,6 +600,6 @@ router.post('/:id/attempt', submitQuizAttempt);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id/attempts', getQuizAttempts);
+router.get('/:id/attempts', validate(quizIdParamSchema), getQuizAttempts);
 
 export { router as quizRoutes };
