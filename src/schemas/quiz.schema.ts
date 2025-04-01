@@ -5,7 +5,7 @@ const QuestionInputSchema = z
     text: z.string().min(1, 'Question text cannot be empty'),
     options: z.array(z.string().min(1)).min(2, 'Must provide at least two options'),
     correctAnswer: z.string().min(1, 'Correct answer cannot be empty'),
-    difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+    difficulty: z.enum(['Easy', 'Medium', 'Hard']).optional(),
     explanation: z.string().nullable().optional(),
   })
   .refine((data) => data.options.includes(data.correctAnswer), {
@@ -20,7 +20,7 @@ export const createQuizSchema = z.object({
       subjectId: z.string().uuid().nullable().optional(),
       lessonId: z.string().uuid().nullable().optional(),
       description: z.string().nullable().optional(),
-      difficulty: z.string().optional().default('medium'),
+      difficulty: z.string().optional().default('Medium'),
       questions: z.array(QuestionInputSchema).min(1, 'Quiz must have at least one question'),
     })
     .refine((data) => data.subjectId || data.lessonId, {
@@ -36,15 +36,11 @@ export const generateQuizSchema = z.object({
       lessonId: z.string().uuid().nullable().optional(),
       topic: z.string().min(1).nullable().optional(),
       numQuestions: z.number().int().positive().max(20).nullable().optional().default(5),
-      difficulty: z.enum(['easy', 'medium', 'hard']).nullable().optional(),
+      difficulty: z.enum(['Easy', 'Medium', 'Hard']).nullable().optional(),
     })
     .refine((data) => data.subjectId || data.lessonId, {
       message: 'Either subjectId or lessonId must be provided',
       path: ['subjectId'],
-    })
-    .refine((data) => !data.subjectId || (data.subjectId && data.topic), {
-      message: 'Topic is required when subjectId is provided',
-      path: ['topic'],
     }),
 });
 

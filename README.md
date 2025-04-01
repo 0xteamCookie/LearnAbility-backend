@@ -2,23 +2,23 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-**Note:** For the overall project vision, goals, and user features, please refer to the main [**Project README**](../README.md). This document covers the backend implementation details.
+**Note:** For the overall project vision, goals, and user features, please refer to the main [**Project README**](https://github.com/0xteamCookie/LearnAbility). This document covers the backend implementation details.
 
 ---
 
 ## Table of Contents
 
-*   [✨ Core Backend Functionality](#-core-backend-functionality)
-*   [🏗️ Architecture](#️-architecture)
-*   [💻 Technology Stack](#-technology-stack)
-*   [🔌 API Documentation](#-api-documentation)
-*   [🚀 Getting Started](#-getting-started)
+*   [✨ Core Backend Functionality](#✨-core-backend-functionality)
+*   [🏗️ Architecture](#🏗️-architecture)
+*   [💻 Technology Stack](#💻-technology-stack)
+*   [🔌 API Documentation](#🔌-api-documentation)
+*   [🚀 Getting Started](#🚀-getting-started)
     *   [Prerequisites](#prerequisites)
     *   [Setup with Docker (Recommended)](#setup-with-docker-recommended)
     *   [Manual Setup](#manual-setup)
     *   [Running the App](#running-the-app)
-*   [📁 Project Structure](#-project-structure)
-*   [📜 License](#-license)
+*   [📁 Project Structure](#📁-project-structure)
+*   [📜 License](#📜-license)
 
 ---
 
@@ -78,6 +78,8 @@ flowchart LR
 ## 🔌 API Documentation
 
 The API provides RESTful endpoints for platform features.
+
+**Live OpenAPI Documentation:** [https://la.rkr.cx/api-docs](https://la.rkr.cx/api-docs)
 
 ### Endpoint Groups Overview
 
