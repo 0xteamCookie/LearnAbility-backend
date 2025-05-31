@@ -5,7 +5,7 @@ import db from '../db/db';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
 const LOCATION = 'us-central1';
-const MODEL_NAME = 'gemini-2.5-pro-exp-03-25';
+const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
 
 let vertexAI: VertexAI;
 let generativeModel: any;
