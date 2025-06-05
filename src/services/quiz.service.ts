@@ -2,7 +2,7 @@ import { VertexAI } from '@google-cloud/vertexai';
 import db from '../db/db';
 import { updateQuizAverage } from './stats.service';
 
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'learnability-project';
 const LOCATION = 'us-central1';
 const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
 

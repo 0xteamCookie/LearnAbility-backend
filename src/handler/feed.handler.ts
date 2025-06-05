@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import db from '../db/db';
 import { VertexAI } from '@google-cloud/vertexai';
 
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || '';
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'learnability-project';
 const LOCATION = 'us-central1';
 const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
 
