@@ -398,7 +398,7 @@ export const generateLessons = async (req: Request, res: Response) => {
 
 /**
  * @desc Generate detailed content for a lesson
- * @route GET /api/v1/pyos/subjects/:subjectId/:lessonId
+ * @route GET /api/v1/pyos/:subjectId/:lessonId
  * @protected
  */
 export const generateLessonsC = async (req: Request, res: Response) => {
