@@ -612,13 +612,15 @@ Generate page ${pageIndex} as:
 
   return lessonContent;
 };
-const lesson = generateFullLessonContent(
-  'lesson-123',
-  'Introduction to TypeScript',
-  'Learn the basics of TypeScript, a typed superset of JavaScript.',
-  8
-);
-console.log(JSON.stringify(lesson, null, 2));
+
+// const lesson = generateFullLessonContent(
+//   'lesson-123',
+//   'Introduction to TypeScript',
+//   'Learn the basics of TypeScript, a typed superset of JavaScript.',
+//   8
+// );
+// console.log(JSON.stringify(lesson, null, 2));
+
 /**
  * Generate lesson content based on syllabus PDF
  * @param syllabusPath Path to the syllabus PDF file

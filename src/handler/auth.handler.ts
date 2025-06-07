@@ -11,12 +11,12 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
  */
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, name, interests, standard } = req.body;
+    const { email, password, name, standard, language, interests, selectedNeeds } = req.body;
 
-    if (!email || !password || !name || !interests || !standard) {
+    if (!email || !password || !name) {
       return void res.status(400).json({
         success: false,
-        message: 'Email, password, name , interests and standard are required',
+        message: 'Email, password, and name are required',
       });
     }
 
@@ -27,7 +27,7 @@ export const register = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await db.user.create({
-      data: { email, password: hashedPassword, name, interests, standard },
+      data: { email, password: hashedPassword, name, standard, language, interests, selectedNeeds },
     });
 
     return void res.status(201).json({ success: true, message: 'User registered successfully' });
