@@ -1,7 +1,30 @@
 import { VertexAI } from '@google-cloud/vertexai';
 import fs from 'fs/promises';
 import mime from 'mime-types';
+interface Block {
+  id: string;
+  type: string;
+  order: number;
+  // You can add more properties as needed for each block type
+  [key: string]: any;
+}
 
+interface Page {
+  id: string;
+  title: string;
+  order: number;
+  estimatedTime: string;
+  blocks: Block[];
+}
+
+interface LessonContent {
+  id: string;
+  title: string;
+  description: string;
+  totalEstimatedTime: string;
+  learningObjectives: string[];
+  pages: Page[];
+}
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'learnability-project';
 const LOCATION = 'us-central1';
 const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
@@ -153,6 +176,9 @@ export const generateLessonContentSpecific = async (
   console.log(
     `[GeminiService] Generating specific lesson content for lesson: ${lessonId}, title: ${title}`
   );
+  title = 'photosynthesis';
+  description =
+    'This lesson covers the process of photosynthesis, including its stages, importance, and the role of chlorophyll in plants.';
   try {
     if (!generativeModel) {
       console.error(
@@ -264,7 +290,335 @@ export const generateLessonContentSpecific = async (
     );
   }
 };
+// export const generateFullLessonContent = async (
+//   lessonId: string,
+//   title: string,
+//   description: string,
+//   maxPages: number = 5
+// ): Promise<LessonContent> => {
+//   console.log(
+//     `[GeminiService] Generating full lesson content for lesson: ${lessonId}, title: ${title}`
+//   );
 
+//   if (!generativeModel) {
+//     throw new Error('Gemini model not initialized');
+//   }
+
+//   // Initialize lesson content with types
+//   let lessonContent: LessonContent = {
+//     id: lessonId,
+//     title,
+//     description,
+//     totalEstimatedTime: '',
+//     learningObjectives: [],
+//     pages: [],
+//   };
+
+//   let pageIndex = 1;
+//   let done = false;
+//   let maxAttempts = maxPages + 2; // Safety to avoid infinite loops
+
+//   // Step 1: Generate learning objectives and totalEstimatedTime
+//   const initialPrompt = `
+// You are an expert educational content creator.
+// Given the lesson title and description, generate ONLY the following fields as JSON:
+// {
+//   "totalEstimatedTime": "XX min",
+//   "learningObjectives": ["objective 1", "objective 2", ...]
+// }
+// Title: "${title}"
+// Description: "${description}"
+// Do not include any other text.
+//   `;
+
+//   try {
+//     const initialResult = await generativeModel.generateContent({
+//       contents: [
+//         {
+//           role: 'user',
+//           parts: [{ text: initialPrompt }],
+//         },
+//       ],
+//       generationConfig: {
+//         maxOutputTokens: 512,
+//         temperature: 0.7,
+//         topP: 0.95,
+//       },
+//     });
+
+//     const initialText = initialResult.response.candidates[0].content.parts[0].text.trim();
+//     const initialJson = JSON.parse(
+//       initialText.substring(initialText.indexOf('{'), initialText.lastIndexOf('}') + 1)
+//     );
+//     lessonContent.totalEstimatedTime = initialJson.totalEstimatedTime;
+//     lessonContent.learningObjectives = initialJson.learningObjectives;
+//   } catch (error) {
+//     throw new Error(
+//       `[GeminiService] Failed to generate lesson objectives: ${
+//         error instanceof Error ? error.message : String(error)
+//       }`
+//     );
+//   }
+
+//   // Step 2: Generate pages one by one
+//   while (!done && pageIndex <= maxPages && maxAttempts-- > 0) {
+//     // Build prompt with current lesson state (excluding blocks for brevity)
+//     const contextPages = lessonContent.pages.map((p) => ({
+//       id: p.id,
+//       title: p.title,
+//       order: p.order,
+//     }));
+
+//     const pagePrompt = `
+// You are an expert educational content creator.
+// Given the lesson so far (see below), generate the NEXT page for the lesson as a JSON object.
+// - Do NOT repeat previous pages.
+// - Use a variety of block types as described.
+// - Ensure unique and descriptive IDs.
+// - Include at least one quiz and one exercise in the whole lesson.
+// - If all required content is covered, respond with "DONE" (as plain text, not JSON).
+
+// Lesson so far:
+// {
+//   "id": "${lessonId}",
+//   "title": "${title}",
+//   "description": "${description}",
+//   "totalEstimatedTime": "${lessonContent.totalEstimatedTime}",
+//   "learningObjectives": ${JSON.stringify(lessonContent.learningObjectives)},
+//   "pages": ${JSON.stringify(contextPages, null, 2)}
+// }
+
+// Generate page ${pageIndex} as:
+// {
+//   "id": "${lessonId}-page-${pageIndex}",
+//   "title": "Page Title",
+//   "order": ${pageIndex},
+//   "estimatedTime": "X min",
+//   "blocks": [
+//     // 5-10 blocks, use a variety of types as described in the original prompt
+//   ]
+// }
+
+// Do not include any text or explanation outside the JSON format, unless you are done, in which case respond with "DONE".
+//     `;
+
+//     try {
+//       const result = await generativeModel.generateContent({
+//         contents: [
+//           {
+//             role: 'user',
+//             parts: [{ text: pagePrompt }],
+//           },
+//         ],
+//         generationConfig: {
+//           maxOutputTokens: 2048,
+//           temperature: 0.7,
+//           topP: 0.95,
+//         },
+//       });
+
+//       const responseText = result.response.candidates[0].content.parts[0].text.trim();
+//       console.log(responseText);
+
+//       if (responseText === 'DONE') {
+//         done = true;
+//         break;
+//       }
+
+//       // Parse and append the new page
+//       const jsonStart = responseText.indexOf('{');
+//       const jsonEnd = responseText.lastIndexOf('}') + 1;
+//       if (jsonStart === -1 || jsonEnd === 0) {
+//         throw new Error('Invalid JSON response format for page');
+//       }
+//       const pageJson = JSON.parse(responseText.substring(jsonStart, jsonEnd)) as Page;
+//       lessonContent.pages.push(pageJson);
+//       pageIndex++;
+//     } catch (error) {
+//       throw new Error(
+//         `[GeminiService] Failed to generate page ${pageIndex}: ${
+//           error instanceof Error ? error.message : String(error)
+//         }`
+//       );
+//     }
+//   }
+
+//   // Final validation: Ensure at least one quiz and one exercise exist
+//   const allBlocks: Block[] = lessonContent.pages.flatMap((p) => p.blocks);
+//   const hasQuiz = allBlocks.some((b) => b.type === 'quiz');
+//   const hasExercise = allBlocks.some((b) => b.type === 'exercise');
+//   if (!hasQuiz || !hasExercise) {
+//     throw new Error(`[GeminiService] Generated lesson is missing a quiz or exercise.`);
+//   }
+
+//   console.log(`[GeminiService] Successfully generated full lesson content for lesson: ${lessonId}`);
+//   return lessonContent;
+// };
+// Main function
+export const generateFullLessonContent = async (
+  lessonId: string,
+  title: string,
+  description: string,
+  maxPages: number = 5
+): Promise<LessonContent> => {
+  if (!generativeModel) {
+    throw new Error('Gemini model not initialized');
+  }
+
+  let lessonContent: LessonContent = {
+    id: lessonId,
+    title,
+    description,
+    totalEstimatedTime: '',
+    learningObjectives: [],
+    pages: [],
+  };
+
+  let pageIndex = 1;
+  let done = false;
+  let maxAttempts = maxPages + 2;
+
+  // Step 1: Generate learning objectives and totalEstimatedTime
+  const initialPrompt = `
+You are an expert educational content creator.
+Given the lesson title and description, return ONLY a valid, minified JSON object with the following fields:
+{
+  "totalEstimatedTime": "XX min",
+  "learningObjectives": ["objective 1", "objective 2", ...]
+}
+Strict rules:
+- Do NOT include any markdown, code fences, or extra text.
+- Do NOT include comments or trailing commas.
+- Do NOT include any explanation or text outside the JSON object.
+- Return the JSON in a single line, without line breaks or spaces.
+Title: "${title}"
+Description: "${description}"
+`;
+
+  try {
+    const initialResult = await generativeModel.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: initialPrompt }],
+        },
+      ],
+      generationConfig: {
+        maxOutputTokens: 512,
+        temperature: 0.7,
+        topP: 0.95,
+      },
+    });
+
+    const initialText = initialResult.response.candidates[0].content.parts[0].text.trim();
+    // No code fences, so just parse
+    const initialJson = JSON.parse(initialText);
+    lessonContent.totalEstimatedTime = initialJson.totalEstimatedTime;
+    lessonContent.learningObjectives = initialJson.learningObjectives;
+  } catch (error) {
+    throw new Error(
+      `[GeminiService] Failed to generate lesson objectives: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+
+  // Step 2: Generate pages one by one
+  while (!done && pageIndex <= maxPages && maxAttempts-- > 0) {
+    const contextPages = lessonContent.pages.map((p) => ({
+      id: p.id,
+      title: p.title,
+      order: p.order,
+    }));
+
+    const pagePrompt = `
+You are an expert educational content creator.
+Given the lesson so far (see below), return ONLY a valid, minified JSON object for the NEXT page.
+Strict rules:
+- Do NOT repeat previous pages.
+- Use a variety of block types as described.
+- Ensure unique and descriptive IDs.
+- Include at least one quiz and one exercise in the whole lesson.
+- If all required content is covered, respond with "DONE" (as plain text, not JSON).
+- Do NOT include any markdown, code fences, or extra text.
+- Do NOT include comments or trailing commas.
+- Do NOT include any explanation or text outside the JSON object.
+- Return the JSON in a single line, without line breaks or spaces.
+
+Lesson so far:
+{
+  "id": "${lessonId}",
+  "title": "${title}",
+  "description": "${description}",
+  "totalEstimatedTime": "${lessonContent.totalEstimatedTime}",
+  "learningObjectives": ${JSON.stringify(lessonContent.learningObjectives)},
+  "pages": ${JSON.stringify(contextPages)}
+}
+
+Generate page ${pageIndex} as:
+{
+  "id": "${lessonId}-page-${pageIndex}",
+  "title": "Page Title",
+  "order": ${pageIndex},
+  "estimatedTime": "X min",
+  "blocks": [
+    // 5-10 blocks, use a variety of types as described in the original prompt
+  ]
+}
+`;
+
+    try {
+      const result = await generativeModel.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: pagePrompt }],
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: 2048,
+          temperature: 0.7,
+          topP: 0.95,
+        },
+      });
+
+      const responseText = result.response.candidates[0].content.parts[0].text.trim();
+      console.log(responseText);
+      if (responseText === 'DONE') {
+        done = true;
+        break;
+      }
+
+      // Parse and append the new page
+      const pageJson = JSON.parse(responseText) as Page;
+      lessonContent.pages.push(pageJson);
+      pageIndex++;
+    } catch (error) {
+      throw new Error(
+        `[GeminiService] Failed to generate page ${pageIndex}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  // Final validation: Ensure at least one quiz and one exercise exist
+  const allBlocks: Block[] = lessonContent.pages.flatMap((p) => p.blocks);
+  const hasQuiz = allBlocks.some((b) => b.type === 'quiz');
+  const hasExercise = allBlocks.some((b) => b.type === 'exercise');
+  if (!hasQuiz || !hasExercise) {
+    throw new Error(`[GeminiService] Generated lesson is missing a quiz or exercise.`);
+  }
+
+  return lessonContent;
+};
+const lesson = generateFullLessonContent(
+  'lesson-123',
+  'Introduction to TypeScript',
+  'Learn the basics of TypeScript, a typed superset of JavaScript.',
+  8
+);
+console.log(JSON.stringify(lesson, null, 2));
 /**
  * Generate lesson content based on syllabus PDF
  * @param syllabusPath Path to the syllabus PDF file
