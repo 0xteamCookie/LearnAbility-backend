@@ -176,9 +176,6 @@ export const generateLessonContentSpecific = async (
   console.log(
     `[GeminiService] Generating specific lesson content for lesson: ${lessonId}, title: ${title}`
   );
-  title = 'photosynthesis';
-  description =
-    'This lesson covers the process of photosynthesis, including its stages, importance, and the role of chlorophyll in plants.';
   try {
     if (!generativeModel) {
       console.error(
