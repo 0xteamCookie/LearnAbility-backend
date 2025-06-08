@@ -407,6 +407,15 @@ export const generateLessonsC = async (req: Request, res: Response) => {
     const { reset } = req.query;
     const userId = (req as any).userId;
 
+    // Fetch user details to get language preference
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { language: true },
+    });
+
+    // Determine target language: user's preference or default to 'en'
+    const targetLanguage = user?.language || 'en';
+
     const lesson = await db.lesson.findFirst({
       where: { id: lessonId },
       select: { id: true, title: true, description: true, subjectId: true },
@@ -444,7 +453,8 @@ export const generateLessonsC = async (req: Request, res: Response) => {
     const detailedContent = await generateLessonContentSpecific(
       lesson.id,
       lesson.title,
-      lesson.description
+      lesson.description,
+      targetLanguage
     );
 
     if (existingContent) {

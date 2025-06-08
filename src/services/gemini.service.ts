@@ -166,15 +166,17 @@ export async function getEmbeddings(texts: string) {
  * @param lessonId The ID of the lesson
  * @param title The title of the lesson
  * @param description The description of the lesson
+ * @param targetLanguage The target language for content generation
  * @returns LessonContent object with detailed pages and blocks
  */
 export const generateLessonContentSpecific = async (
   lessonId: string,
   title: string,
-  description: string
+  description: string,
+  targetLanguage: string = 'en'
 ): Promise<any> => {
   console.log(
-    `[GeminiService] Generating specific lesson content for lesson: ${lessonId}, title: ${title}`
+    `[GeminiService] Generating specific lesson content for lesson: ${lessonId}, title: ${title}, language: ${targetLanguage}`
   );
   try {
     if (!generativeModel) {
@@ -187,6 +189,7 @@ export const generateLessonContentSpecific = async (
     const systemPrompt = `
     You are an expert educational content creator specializing in creating detailed, engaging lesson content.
     Generate a complete lesson content structure based on the title and description provided.
+    The target language for ALL textual content (titles, descriptions, page content, block content, quiz questions, examples, etc.) is: ${targetLanguage}.
     
     The response must be a valid JSON object following EXACTLY this structure:
     {
@@ -233,6 +236,7 @@ export const generateLessonContentSpecific = async (
     Ensure proper content flow and learning progression across pages.
     Include at least one quiz and one exercise in the lesson.
     Do not include any text or explanation outside the JSON format.
+    Ensure all generated text (titles, descriptions, content within blocks, quiz questions, options, explanations, etc.) is in ${targetLanguage}.
     `;
 
     const result = await generativeModel.generateContent({
@@ -719,5 +723,102 @@ export const generateLessonContent = async (
         error instanceof Error ? error.message : String(error)
       }`
     );
+  }
+};
+
+// New function for translating a map of texts
+export const translateTextMap = async (
+  textsToTranslate: Record<string, string>,
+  targetLanguageCode: string,
+  sourceLanguageCode: string = 'en' // Assuming source is English by default
+): Promise<Record<string, string>> => {
+  console.log(
+    `[GeminiService] Translating texts to ${targetLanguageCode}. Input keys: ${Object.keys(
+      textsToTranslate
+    ).join(', ')}`
+  );
+  if (!generativeModel) {
+    console.error('[GeminiService] Gemini model not initialized during text map translation.');
+    throw new Error('Gemini model not initialized');
+  }
+
+  const inputText = JSON.stringify(textsToTranslate, null, 2);
+
+  // Prepare a more detailed prompt for translation
+  const systemPrompt = `You are an expert language translator.\nYour task is to translate the values of the provided JSON object from ${sourceLanguageCode} to ${targetLanguageCode}.\n\nIMPORTANT RULES:\n1.  Translate ONLY the string values of the JSON object.\n2.  Keep ALL JSON keys exactly as they are in the input.\n3.  The output MUST be a single, valid JSON object.\n4.  Do NOT include any markdown, code fences (like \`\`\`json), comments, or any explanatory text outside the JSON object itself.\n5.  Ensure the output JSON is minified (no unnecessary whitespace or newlines).\n6.  If a value cannot be meaningfully translated (e.g., it\'s a placeholder like "{{name}}"), keep the original value.\n\nInput JSON object to translate:\n${inputText}\n\nTranslated JSON object in ${targetLanguageCode}:\n`;
+
+  try {
+    const result = await generativeModel.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: systemPrompt }],
+        },
+      ],
+      generationConfig: {
+        // Adjust generationConfig as needed for translation tasks
+        maxOutputTokens: 8192, // Ensure this is enough for your largest JSON
+        temperature: 0.3,      // Lower temperature for more deterministic translation
+        topP: 0.95,
+        // responseMimeType: "application/json", // If supported and reliable for this model version
+      },
+    });
+
+    const response = result.response;
+
+    if (!response || !response.candidates || response.candidates.length === 0 || !response.candidates[0].content || !response.candidates[0].content.parts || !response.candidates[0].content.parts[0].text) {
+      console.error('[GeminiService] Invalid or empty response structure from Gemini API:', JSON.stringify(response, null, 2));
+      throw new Error('Invalid or empty response from Gemini API during translation.');
+    }
+
+    let responseText = response.candidates[0].content.parts[0].text.trim();
+    console.log('[GeminiService] Raw Gemini Response:\n', responseText);
+
+    // Attempt to clean the response to ensure it's valid JSON
+    // Remove potential markdown and ensure it starts with { and ends with }
+    if (responseText.startsWith('```json')) {
+      responseText = responseText.substring(7);
+    }
+    if (responseText.endsWith('```')) {
+      responseText = responseText.substring(0, responseText.length - 3);
+    }
+    responseText = responseText.trim();
+
+    // Sometimes the model might still wrap the JSON or add minor text, so we try to find the JSON block
+    let jsonStart = responseText.indexOf('{');
+    let jsonEnd = responseText.lastIndexOf('}') + 1;
+
+    if (jsonStart === -1 || jsonEnd === 0) {
+      console.error('[GeminiService] Could not find valid JSON object in Gemini response. Response was:', responseText);
+      throw new Error('Could not find valid JSON object in Gemini response.');
+    }
+
+    const jsonStr = responseText.substring(jsonStart, jsonEnd);
+    
+    const translatedData = JSON.parse(jsonStr);
+
+    console.log(
+      `[GeminiService] Successfully translated texts to ${targetLanguageCode}. Output keys: ${Object.keys(
+        translatedData
+      ).join(', ')}`
+    );
+    return translatedData;
+  } catch (error: any) {
+    console.error(
+      `[GeminiService] Error translating text map to ${targetLanguageCode}:`,
+      error
+    );
+    // Check if the error is from JSON.parse and include the problematic string
+    if (error instanceof SyntaxError && error.message.includes('JSON')) {
+      throw new Error(
+        `[GeminiService] Failed to parse translated JSON response from Gemini. Raw response was: ${error.message}. Text: ${error.stack?.substring(0,500)}`
+      );
+    } else {
+        throw new Error(
+            `[GeminiService] Failed to translate text map: ${
+            error instanceof Error ? error.message : String(error)
+            }`
+        );
+    }
   }
 };

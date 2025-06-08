@@ -13,6 +13,7 @@ import { pyosRoutes } from './routes/pyos.routes';
 import { webhookRoutes } from './webhook/navigation';
 import { quizRoutes } from './routes/quiz.routes';
 import { analyticsRoutes } from './routes/analytics.routes';
+import { translationRoutes } from './routes/translation.routes';
 import placeholderHandler from './handler/placeholder.handler';
 
 dotenv.config();
@@ -55,7 +56,7 @@ const swaggerDefinition = {
 const options = {
   swaggerDefinition,
 
-  apis: ['./src/routes/*.ts'],
+  apis: ['./src/routes/*.ts', './src/schemas/*.ts'],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
@@ -80,6 +81,7 @@ app.use('/api/v1/pyos', pyosRoutes);
 app.use('/webhook', webhookRoutes);
 app.use('/api/v1/quizzes', quizRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/translations', translationRoutes);
 app.get('/placeholder.svg', placeholderHandler.getSVG);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
