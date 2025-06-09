@@ -90,6 +90,14 @@ export const getProfile = async (req: Request, res: Response) => {
     let updatedStreak = user.stats?.studyStreak || 0;
     let lastStudiedAt = user.stats?.lastStudiedAt;
 
+    const currentStats = user.stats || {
+      studyStreak: 0,
+      completedLessons: 0,
+      weeklyProgress: 0,
+      quizAverage: null,
+      lastStudiedAt: null,
+    };
+
     if (lastStudiedAt) {
       const lastDate = new Date(lastStudiedAt);
       const differenceInDays = Math.floor(
@@ -105,10 +113,25 @@ export const getProfile = async (req: Request, res: Response) => {
       updatedStreak = 1;
     }
 
-    await db.userStats.upsert({
+    const updatedUserStats = await db.userStats.upsert({
       where: { userId },
       update: { studyStreak: updatedStreak, lastStudiedAt: now },
-      create: { userId, studyStreak: 1, lastStudiedAt: now },
+      create: {
+        userId,
+        studyStreak: 1,
+        lastStudiedAt: now,
+        completedLessons: 0,
+        weeklyProgress: 0,
+      },
+      select: {
+        id: true,
+        studyStreak: true,
+        completedLessons: true,
+        weeklyProgress: true,
+        quizAverage: true,
+        lastStudiedAt: true,
+        userId: true,
+      }
     });
 
     return void res.json({
@@ -117,12 +140,13 @@ export const getProfile = async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        interests: user.interests,
         standard: user.standard,
+        interests: user.interests,
+        language: user.language,
+        selectedNeeds: user.selectedNeeds,
         syllabusContent: user.syllabusContent,
-        stats: {
-          studyStreak: updatedStreak,
-        },
+        createdAt: user.createdAt,
+        stats: updatedUserStats,
       },
     });
   } catch (error) {
