@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  app1:
+    build: .
+    container_name: express_app1
+    environment:
+      - NODE_ENV=development
+    ports:
+      - '3001:3000' # Map host 3001 to container 3000
+  app2:
+    build: .
+    container_name: express_app2
+    environment:
+      - NODE_ENV=development
+    ports:
+      - '3002:3000' # Map host 3002 to container 3000
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_lb
+    ports:
+      - '8080:80'
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app1
+      - app2
